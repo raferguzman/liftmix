@@ -1,4 +1,4 @@
-const CACHE_NAME = "liftmix-v2";
+const CACHE_NAME = "liftmix-v3";
 const APP_FILES = [
   "./",
   "./index.html",

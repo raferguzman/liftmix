@@ -22,6 +22,7 @@ const pageResetButton = document.querySelector("#page-reset-button");
 const views = document.querySelectorAll(".view");
 const tabs = document.querySelectorAll(".tab");
 const routinePanel = document.querySelector("#routine-panel");
+const todayView = document.querySelector("#view-today");
 const priorityList = document.querySelector("#priority-list");
 const equipmentList = document.querySelector("#equipment-list");
 const profileSummary = document.querySelector("#profile-summary");
@@ -206,6 +207,7 @@ function updatePriorityRanks() {
 }
 
 function renderWorkout() {
+  todayView.classList.toggle("is-empty", !state.workout);
   if (!state.workout) {
     routinePanel.innerHTML = `
       <div class="empty-state">
