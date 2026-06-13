@@ -18,9 +18,18 @@
   box-sizing: border-box;
 }
 
+html,
 body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  position: fixed;
+  inset: 0;
   margin: 0;
-  min-height: 100vh;
   display: grid;
   place-items: center;
   background:
@@ -43,16 +52,17 @@ button {
 
 .phone-shell {
   width: min(100vw, 430px);
-  min-height: 100vh;
+  height: 100dvh;
   display: grid;
   place-items: center;
   padding: 18px;
+  overflow: hidden;
 }
 
 .app-screen {
   position: relative;
   width: min(100%, 390px);
-  height: min(860px, calc(100vh - 36px));
+  height: min(860px, calc(100dvh - 36px));
   min-height: 720px;
   overflow: hidden;
   border: 10px solid #0a0a0b;
@@ -156,6 +166,8 @@ p {
   height: calc(100% - 92px);
   overflow-y: auto;
   padding: 16px 16px 94px;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .view.is-active {
@@ -1252,7 +1264,7 @@ select {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
   transform: translateX(-50%) translateY(18px);
   width: min(calc(100vw - 32px), 390px);
   padding: 12px 14px;
@@ -1361,9 +1373,23 @@ select {
 
   .app-screen {
     width: 100vw;
-    height: 100vh;
-    min-height: 100vh;
+    height: 100dvh;
+    min-height: 0;
     border: 0;
     border-radius: 0;
+  }
+
+  .topbar {
+    height: calc(92px + env(safe-area-inset-top));
+    padding-top: calc(18px + env(safe-area-inset-top));
+  }
+
+  .view {
+    height: calc(100% - 92px - env(safe-area-inset-top));
+    padding-bottom: calc(94px + env(safe-area-inset-bottom));
+  }
+
+  .tabbar {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
 }
