@@ -174,9 +174,25 @@ p {
   display: block;
 }
 
-#view-today.is-empty {
+#view-today.is-empty.is-active {
+  display: flex;
+  flex-direction: column;
   overflow-y: hidden;
   overscroll-behavior: none;
+}
+
+#view-today.is-empty .workout-hero {
+  flex: 0 0 auto;
+}
+
+#view-today.is-empty .routine-panel {
+  flex: 1;
+  min-height: 0;
+}
+
+#view-today.is-empty .empty-state {
+  height: 100%;
+  min-height: 0;
 }
 
 .workout-hero {

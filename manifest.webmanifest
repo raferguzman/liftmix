@@ -1,6 +1,6 @@
 {
-  "name": "Liftmix",
-  "short_name": "Liftmix",
+  "name": "LiftMix",
+  "short_name": "LiftMix",
   "description": "Varied strength workouts built around your priorities, equipment, recovery, and available time.",
   "start_url": "./index.html",
   "scope": "./",
