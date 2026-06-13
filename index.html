@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#176f6b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Liftmix" />
+    <meta name="description" content="Varied strength workouts built around your priorities, equipment, recovery, and available time." />
+    <title>Liftmix</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/liftmix-180.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="phone-shell" aria-label="Liftmix workout app prototype">
+      <section class="app-screen">
+        <header class="topbar">
+          <div>
+            <p class="kicker">Liftmix</p>
+            <h1 id="screen-title">Today</h1>
+          </div>
+          <button class="page-reset-button" id="page-reset-button" aria-label="Reset page" title="Reset page" hidden>
+            <span aria-hidden="true">↻</span>
+          </button>
+        </header>
+
+        <section class="view is-active" id="view-today" aria-labelledby="today-heading">
+          <div class="workout-hero">
+            <div>
+              <p class="eyebrow" id="profile-summary">45 min · Full gym</p>
+              <h2 id="today-heading">Ready when you are.</h2>
+            </div>
+            <button class="primary-action" id="generate-button">Generate Workout</button>
+          </div>
+
+          <section class="routine-panel" id="routine-panel">
+            <div class="empty-state">
+              <div class="mini-plate" aria-hidden="true"></div>
+              <h3>No workout generated yet</h3>
+              <p>Your saved settings stay ready. Tap Generate Workout when you get to the gym.</p>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-settings" aria-label="Profile">
+          <div class="section-header">
+            <p>Your workout preferences stay in place until you change them.</p>
+          </div>
+
+          <form id="settings-form" class="settings-form">
+            <fieldset>
+              <legend>Muscle priorities</legend>
+              <div class="priority-list" id="priority-list"></div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Duration</legend>
+              <div class="segmented" role="radiogroup" aria-label="Workout duration">
+                <label><input type="radio" name="duration" value="30" /> <span>30</span></label>
+                <label><input type="radio" name="duration" value="45" /> <span>45</span></label>
+                <label><input type="radio" name="duration" value="60" /> <span>60</span></label>
+                <label><input type="radio" name="duration" value="custom" /> <span>Custom</span></label>
+              </div>
+              <label class="custom-duration" id="custom-duration-row">
+                <span>Minutes</span>
+                <input id="custom-duration-input" name="customDuration" type="number" inputmode="numeric" min="20" max="120" step="5" value="40" />
+              </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Equipment</legend>
+              <div class="equipment-grid" id="equipment-list"></div>
+            </fieldset>
+
+            <button class="primary-action full" type="submit">Save Profile</button>
+          </form>
+        </section>
+
+        <section class="view" id="view-excluded" aria-label="Exercises">
+          <div class="section-header section-header-action">
+            <div>
+              <p>Choose which exercises can appear in generated workouts.</p>
+            </div>
+            <button class="add-exercise-button" id="add-exercise-button" aria-label="Add exercise" title="Add exercise"></button>
+          </div>
+          <div class="exercise-toolbar">
+            <label class="exercise-search">
+              <span aria-hidden="true">⌕</span>
+              <input id="exercise-search-input" type="search" placeholder="Search exercises" autocomplete="off" />
+            </label>
+            <select id="exercise-status-filter" aria-label="Exercise status">
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="hidden">Hidden</option>
+            </select>
+          </div>
+          <div class="exercise-library" id="exercise-library"></div>
+        </section>
+
+        <section class="view" id="view-history" aria-label="History">
+          <div class="section-header">
+            <p>Recent workouts help Liftmix avoid stale repeats.</p>
+          </div>
+          <div class="list-panel" id="history-list"></div>
+        </section>
+
+        <nav class="tabbar" aria-label="Primary navigation">
+          <button class="tab is-active" data-view="today" aria-label="Today">
+            <span class="tab-barbell" aria-hidden="true">
+              <i class="barbell-plate outer left"></i>
+              <i class="barbell-plate inner left"></i>
+              <i class="barbell-bar"></i>
+              <i class="barbell-plate inner right"></i>
+              <i class="barbell-plate outer right"></i>
+            </span>
+            <small>Today</small>
+          </button>
+          <button class="tab" data-view="settings" aria-label="Profile">
+            <span class="tab-controls" aria-hidden="true">
+              <i class="control-line top"></i>
+              <i class="control-line middle"></i>
+              <i class="control-line bottom"></i>
+              <i class="control-knob top"></i>
+              <i class="control-knob middle"></i>
+              <i class="control-knob bottom"></i>
+            </span>
+            <small>Profile</small>
+          </button>
+          <button class="tab" data-view="excluded" aria-label="Exercises">
+            <span class="tab-exercise-grid" aria-hidden="true">
+              <i></i><i></i><i></i><i></i>
+            </span>
+            <small>Exercises</small>
+          </button>
+          <button class="tab" data-view="history" aria-label="Workout history">
+            <span class="tab-history-cards" aria-hidden="true">
+              <i class="history-card back"></i>
+              <i class="history-card front">
+                <b></b><b></b><b></b>
+              </i>
+            </span>
+            <small>History</small>
+          </button>
+        </nav>
+      </section>
+    </main>
+
+    <div class="sheet-backdrop" id="swap-backdrop" hidden>
+      <section class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="swap-title">
+        <div class="sheet-grip" aria-hidden="true"></div>
+        <h2 id="swap-title">Swap exercise</h2>
+        <p id="swap-detail"></p>
+        <div class="sheet-actions">
+          <button class="secondary-action" id="swap-today-button">Swap Today</button>
+          <button class="danger-action" id="swap-forever-button">Swap Forever</button>
+        </div>
+        <button class="text-action" id="cancel-swap-button">Cancel</button>
+      </section>
+    </div>
+
+    <div class="sheet-backdrop upper-sheet-backdrop" id="cancel-workout-backdrop" hidden>
+      <section class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="cancel-workout-title">
+        <div class="sheet-grip" aria-hidden="true"></div>
+        <h2 id="cancel-workout-title">Cancel workout?</h2>
+        <p>This workout will not be saved to history.</p>
+        <div class="sheet-actions">
+          <button class="secondary-action" id="keep-workout-button">Keep Workout</button>
+          <button class="danger-action" id="confirm-cancel-workout-button">Cancel Without Saving</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="sheet-backdrop" id="exercise-form-backdrop" hidden>
+      <section class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="exercise-form-title">
+        <div class="sheet-grip" aria-hidden="true"></div>
+        <h2 id="exercise-form-title">Add Exercise</h2>
+        <form id="exercise-form" class="exercise-form">
+          <label>
+            <span>Exercise Name</span>
+            <input id="custom-exercise-name" name="name" type="text" maxlength="60" required placeholder="e.g. Landmine Press" />
+          </label>
+          <label>
+            <span>Muscle Group</span>
+            <select id="custom-exercise-muscle" name="muscle" required>
+              <option value="Arms">Arms</option>
+              <option value="Back">Back</option>
+              <option value="Chest">Chest</option>
+              <option value="Core">Core</option>
+              <option value="Legs">Legs</option>
+              <option value="Shoulders">Shoulders</option>
+            </select>
+          </label>
+          <label>
+            <span>Equipment</span>
+            <select id="custom-exercise-equipment" name="equipment" required>
+              <option value="Barbell">Barbell</option>
+              <option value="Bodyweight">Bodyweight</option>
+              <option value="Cables">Cables</option>
+              <option value="Dumbbells">Dumbbells</option>
+              <option value="Kettlebells">Kettlebells</option>
+              <option value="Machines">Machines</option>
+            </select>
+          </label>
+          <div class="sheet-actions">
+            <button class="secondary-action" id="cancel-exercise-form-button" type="button">Cancel</button>
+            <button class="primary-action" type="submit">Save Exercise</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="sheet-backdrop" id="exercise-actions-backdrop" hidden>
+      <section class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="exercise-actions-title">
+        <div class="sheet-grip" aria-hidden="true"></div>
+        <h2 id="exercise-actions-title">Custom Exercise</h2>
+        <p id="exercise-actions-detail"></p>
+        <div class="sheet-actions">
+          <button class="secondary-action" id="edit-custom-exercise-button">Edit Exercise</button>
+          <button class="danger-action" id="delete-custom-exercise-button">Delete Exercise</button>
+        </div>
+        <button class="text-action" id="close-exercise-actions-button">Cancel</button>
+      </section>
+    </div>
+
+    <div class="sheet-backdrop" id="delete-exercise-backdrop" hidden>
+      <section class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="delete-exercise-title">
+        <div class="sheet-grip" aria-hidden="true"></div>
+        <h2 id="delete-exercise-title">Delete exercise?</h2>
+        <p id="delete-exercise-detail">This removes it from future workouts. Past history will remain unchanged.</p>
+        <div class="sheet-actions">
+          <button class="secondary-action" id="keep-custom-exercise-button">Keep Exercise</button>
+          <button class="danger-action" id="confirm-delete-exercise-button">Delete Exercise</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="sheet-backdrop upper-sheet-backdrop" id="page-reset-backdrop" hidden>
+      <section class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="page-reset-title">
+        <div class="sheet-grip" aria-hidden="true"></div>
+        <h2 id="page-reset-title">Reset Profile?</h2>
+        <p id="page-reset-message">This restores your workout preferences to their defaults.</p>
+        <div class="sheet-actions">
+          <button class="secondary-action" id="keep-page-settings-button">Keep Settings</button>
+          <button class="danger-action" id="confirm-page-reset-button">Reset Profile</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="center-notice" id="center-notice" role="status" aria-live="assertive" hidden>
+      <div class="center-notice-panel">
+        <span class="center-notice-icon" aria-hidden="true"></span>
+        <strong id="center-notice-title">Workout canceled</strong>
+        <p id="center-notice-message">Nothing was saved to History.</p>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="./exercises.js"></script>
+    <script src="./app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator && location.protocol !== "file:") {
+        window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js"));
+      }
+    </script>
+  </body>
+</html>

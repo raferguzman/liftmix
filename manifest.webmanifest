@@ -1,0 +1,23 @@
+{
+  "name": "Liftmix",
+  "short_name": "Liftmix",
+  "description": "Varied strength workouts built around your priorities, equipment, recovery, and available time.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f4ef",
+  "theme_color": "#176f6b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icons/liftmix-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/liftmix-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
