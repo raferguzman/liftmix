@@ -74,7 +74,10 @@ function normalizeState(nextState) {
   profile.priorityOrder = getPriorityOrder(profile);
   profile.priorities = prioritiesFromOrder(profile.priorityOrder);
   const customExercises = Array.isArray(nextState.customExercises) ? nextState.customExercises : [];
-  return { ...nextState, profile, customExercises };
+  const exerciseNotes = nextState.exerciseNotes && typeof nextState.exerciseNotes === "object"
+    ? nextState.exerciseNotes
+    : {};
+  return { ...nextState, profile, customExercises, exerciseNotes };
 }
 
 function getExerciseLibrary() {
@@ -227,6 +230,7 @@ function renderWorkout() {
       <div class="exercise-main">
         <h3>${exercise.name}</h3>
         <p>${exercise.note}</p>
+        ${renderExerciseNote(exercise)}
         <div class="last-performance">${formatLastPerformance(exercise)}</div>
         <div class="exercise-meta">
           <span class="pill">${exercise.muscle}</span>
@@ -252,6 +256,44 @@ function renderWorkout() {
     ${cards}
     <button class="primary-action full finish-button" id="finish-button">Finish Workout</button>
   `;
+}
+
+function renderExerciseNote(exercise, location = "workout") {
+  const note = getExerciseNote(exercise.id);
+  return `
+    <label class="exercise-note ${location === "library" ? "is-library-note" : ""}">
+      <span>Your note <small data-note-count="${exercise.id}">${note.length}/140</small></span>
+      <textarea
+        data-exercise-note="${exercise.id}"
+        maxlength="140"
+        rows="2"
+        aria-label="Your note for ${escapeHtml(exercise.name)}"
+        placeholder="Tap to write"
+      >${escapeHtml(note)}</textarea>
+    </label>
+  `;
+}
+
+function getExerciseNote(exerciseId) {
+  return state.exerciseNotes?.[exerciseId] || "";
+}
+
+function normalizeExerciseNote(value) {
+  return String(value || "")
+    .replace(/\r/g, "")
+    .split("\n")
+    .slice(0, 3)
+    .join("\n")
+    .slice(0, 140);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function renderSetRows(exercise) {
@@ -343,7 +385,7 @@ function renderExercises() {
             const active = !state.excluded.includes(exercise.id);
             return `
               <div class="exercise-library-row">
-                <div>
+                <div class="exercise-library-info">
                   <strong>${exercise.name}</strong>
                   <p>${exercise.equipment}${exercise.custom ? ' · <span class="custom-badge">Custom</span>' : ""}</p>
                 </div>
@@ -355,6 +397,7 @@ function renderExercises() {
                     <i aria-hidden="true"></i>
                   </label>
                 </div>
+                ${renderExerciseNote(exercise, "library")}
               </div>
             `;
           }).join("")}
@@ -431,6 +474,7 @@ function formatHistoryExercises(item) {
     <div class="history-exercise">
       <span>${exercise.name}</span>
       <small>${formatHistorySets(exercise.sets, exercise.logging)}</small>
+      ${exercise.noteSnapshot ? `<p class="history-note"><strong>Note:</strong> ${escapeHtml(exercise.noteSnapshot)}</p>` : ""}
     </div>
   `).join("");
 }
@@ -845,6 +889,7 @@ function deleteCustomExercise() {
   if (!exercise) return;
   state.customExercises = state.customExercises.filter((item) => item.id !== selectedCustomExerciseId);
   state.excluded = state.excluded.filter((id) => id !== selectedCustomExerciseId);
+  delete state.exerciseNotes[selectedCustomExerciseId];
   selectedCustomExerciseId = null;
   closeDeleteExerciseConfirmation();
   saveState();
@@ -899,6 +944,7 @@ function resetCurrentPage() {
   }
 
   if (activeView === "excluded") {
+    state.customExercises.forEach((exercise) => delete state.exerciseNotes[exercise.id]);
     state.customExercises = [];
     state.excluded = [];
     exerciseStatusFilter = "all";
@@ -1015,6 +1061,23 @@ document.addEventListener("input", (event) => {
     exercise.completed = exercise.log.every((entry) => entry.done);
     persistState();
     updateCompletionButtons(exercise);
+  }
+  if (event.target.matches("[data-exercise-note]")) {
+    const exerciseId = event.target.dataset.exerciseNote;
+    const note = normalizeExerciseNote(event.target.value);
+    if (event.target.value !== note) event.target.value = note;
+    if (note) {
+      state.exerciseNotes[exerciseId] = note;
+    } else {
+      delete state.exerciseNotes[exerciseId];
+    }
+    document.querySelectorAll("[data-exercise-note]").forEach((field) => {
+      if (field !== event.target && field.dataset.exerciseNote === exerciseId) field.value = note;
+    });
+    document.querySelectorAll("[data-note-count]").forEach((counter) => {
+      if (counter.dataset.noteCount === exerciseId) counter.textContent = `${note.length}/140`;
+    });
+    persistState();
   }
 });
 
@@ -1155,6 +1218,7 @@ document.addEventListener("click", (event) => {
         name: exercise.name,
         muscle: exercise.muscle,
         logging: exercise.logging || "weight",
+        noteSnapshot: getExerciseNote(exercise.id),
         completed: exercise.completed || exercise.log.some((set) => set.done),
         secondaryMuscles: secondaryMusclesForExercise(exercise),
         sets: exercise.log
