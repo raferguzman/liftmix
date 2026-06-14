@@ -490,7 +490,8 @@ function generateWorkout() {
   const profile = state.profile;
   const targetDuration = profile.duration;
   const timeBudget = workoutTimeBudget(targetDuration);
-  const maxMoves = Math.max(2, Math.floor(targetDuration / 9));
+  const minimumMinutes = workoutMinimumMinutes(targetDuration);
+  const maxMoves = Math.min(18, Math.max(2, Math.ceil(targetDuration / 7)));
   const pool = getExerciseLibrary().filter((exercise) => {
     return profile.equipment.includes(exercise.equipment) && !state.excluded.includes(exercise.id);
   });
@@ -501,62 +502,62 @@ function generateWorkout() {
   });
 
   const recentNames = new Set(state.history.slice(0, 3).flatMap((item) => item.exerciseIds));
-  const weightedMuscles = muscles.flatMap((muscle) => {
-    if (!generationPool.some((exercise) => exercise.muscle === muscle)) return [];
-    const recoveryLoad = recovery[muscle] || 0;
-    const baseWeight = Math.max(0, profile.priorities[muscle] ?? 0);
-    const adjustedWeight = Math.max(1, Math.round(baseWeight * (1 - recoveryLoad * 0.75)));
-    return Array(adjustedWeight).fill(muscle);
-  });
+  const musclePlan = buildMusclePlan(profile, generationPool, recovery, maxMoves);
   const chosen = [];
   let estimatedMinutes = 0;
-  let attempts = 0;
 
-  while (
-    estimatedMinutes < timeBudget
-    && chosen.length < generationPool.length
-    && chosen.length < maxMoves
-    && attempts < 240
-  ) {
-    attempts += 1;
-    const muscle = weightedMuscles.length ? weightedMuscles[randomIndex(weightedMuscles.length)] : muscles[randomIndex(muscles.length)];
-    const candidates = generationPool
-      .filter((exercise) => exercise.muscle === muscle)
-      .filter((exercise) => !chosen.some((picked) => picked.id === exercise.id))
-      .sort((a, b) => {
-        const recoveryDifference = exerciseRecoveryBurden(a, recovery) - exerciseRecoveryBurden(b, recovery);
-        if (recoveryDifference) return recoveryDifference;
-        return Number(recentNames.has(a.id)) - Number(recentNames.has(b.id));
-      });
-
-    const prescribed = candidates
-      .map((exercise) => withPrescription(exercise))
-      .find((exercise) => {
-        const fitsTime = estimatedMinutes + estimatedExerciseMinutes(exercise) <= timeBudget;
-        return fitsTime && canAddExercise(chosen, exercise);
-      });
-
+  musclePlan.forEach((muscle) => {
+    if (chosen.length >= maxMoves) return;
+    const prescribed = chooseExerciseForMuscle(
+      muscle,
+      generationPool,
+      chosen,
+      recentNames,
+      recovery,
+      timeBudget - estimatedMinutes
+    );
     if (prescribed) {
       chosen.push(prescribed);
       estimatedMinutes += estimatedExerciseMinutes(prescribed);
     }
+  });
+
+  const fillOrder = [...musclePlan, ...rankAvailableMuscles(profile, generationPool, recovery)]
+    .filter((muscle, index, list) => list.indexOf(muscle) === index);
+
+  let madeProgress = true;
+  while (chosen.length < maxMoves && estimatedMinutes < minimumMinutes && madeProgress) {
+    madeProgress = false;
+    const rankedFillOrder = [...fillOrder].sort((a, b) => {
+      const countA = chosen.filter((exercise) => exercise.muscle === a).length;
+      const countB = chosen.filter((exercise) => exercise.muscle === b).length;
+      return countA - countB;
+    });
+
+    for (const muscle of rankedFillOrder) {
+      const prescribed = chooseExerciseForMuscle(
+        muscle,
+        generationPool,
+        chosen,
+        recentNames,
+        recovery,
+        timeBudget - estimatedMinutes
+      );
+      if (prescribed) {
+        chosen.push(prescribed);
+        estimatedMinutes += estimatedExerciseMinutes(prescribed);
+        madeProgress = true;
+        break;
+      }
+    }
   }
 
-  generationPool.forEach((exercise) => {
-    if (chosen.length >= maxMoves) return;
-    const alreadyChosen = chosen.some((picked) => picked.id === exercise.id);
-    if (alreadyChosen) return;
-
-    const prescribed = withPrescription(exercise);
-    const minutes = estimatedExerciseMinutes(prescribed);
-    if (
-      estimatedMinutes + minutes <= timeBudget
-      && canAddExercise(chosen, prescribed)
-    ) {
-      chosen.push(prescribed);
-      estimatedMinutes += minutes;
-    }
-  });
+  estimatedMinutes = extendWorkoutTowardMinimum(
+    chosen,
+    estimatedMinutes,
+    minimumMinutes,
+    timeBudget
+  );
 
   const focus = topMuscles(chosen).slice(0, 2).join(" + ") || "Balanced";
   state.workout = {
@@ -566,6 +567,85 @@ function generateWorkout() {
     exercises: chosen
   };
   saveState();
+}
+
+function buildMusclePlan(profile, pool, recovery, maxMoves) {
+  const ranked = rankAvailableMuscles(profile, pool, recovery);
+  const targetGroups = Math.min(ranked.length, maxMoves, targetMuscleGroupCount(profile.duration));
+  if (targetGroups <= 1) return ranked.slice(0, targetGroups);
+
+  const prioritySlots = Math.max(1, targetGroups - 1);
+  const plan = ranked.slice(0, prioritySlots);
+  const rotationCandidates = ranked.slice(prioritySlots);
+  const rotatingMuscle = weightedMuscleChoice(rotationCandidates, profile, recovery);
+  if (rotatingMuscle) plan.push(rotatingMuscle);
+  return plan;
+}
+
+function targetMuscleGroupCount(duration) {
+  if (duration <= 20) return 2;
+  if (duration <= 30) return 3;
+  if (duration <= 45) return 4;
+  if (duration <= 60) return 5;
+  return 6;
+}
+
+function rankAvailableMuscles(profile, pool, recovery) {
+  return muscles
+    .filter((muscle) => pool.some((exercise) => exercise.muscle === muscle))
+    .sort((a, b) => {
+      const scoreA = (profile.priorities[a] || 0) * 10 - (recovery[a] || 0) * 30;
+      const scoreB = (profile.priorities[b] || 0) * 10 - (recovery[b] || 0) * 30;
+      return scoreB - scoreA;
+    });
+}
+
+function weightedMuscleChoice(candidates, profile, recovery) {
+  if (!candidates.length) return null;
+  const weighted = candidates.map((muscle) => ({
+    muscle,
+    weight: Math.max(1, Math.pow(profile.priorities[muscle] || 1, 2) * (1 - (recovery[muscle] || 0) * 0.75))
+  }));
+  const total = weighted.reduce((sum, item) => sum + item.weight, 0);
+  let roll = Math.random() * total;
+  for (const item of weighted) {
+    roll -= item.weight;
+    if (roll <= 0) return item.muscle;
+  }
+  return weighted.at(-1).muscle;
+}
+
+function chooseExerciseForMuscle(muscle, pool, chosen, recentNames, recovery, minutesAvailable) {
+  const candidates = pool
+    .filter((exercise) => exercise.muscle === muscle)
+    .filter((exercise) => !chosen.some((picked) => picked.id === exercise.id))
+    .map((exercise) => withPrescription(exercise))
+    .filter((exercise) => {
+      return estimatedExerciseMinutes(exercise) <= minutesAvailable
+        && canAddExercise(chosen, exercise);
+    });
+
+  const lowerRecoveryBurden = candidates.filter((exercise) => {
+    const minimum = Math.min(...candidates.map((item) => exerciseRecoveryBurden(item, recovery)));
+    return exerciseRecoveryBurden(exercise, recovery) === minimum;
+  });
+  const preferredPool = lowerRecoveryBurden.length ? lowerRecoveryBurden : candidates;
+  const longWorkoutCompounds = state.profile.duration > 75
+    ? preferredPool.filter((exercise) => exercise.style === "compound")
+    : [];
+  const durationPool = longWorkoutCompounds.length ? longWorkoutCompounds : preferredPool;
+  const fresh = shuffleArray(durationPool.filter((exercise) => !recentNames.has(exercise.id)));
+  const recent = shuffleArray(durationPool.filter((exercise) => recentNames.has(exercise.id)));
+  return fresh[0] || recent[0] || null;
+}
+
+function shuffleArray(items) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomIndex(index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
 }
 
 function muscleRecoveryStatus() {
@@ -611,26 +691,73 @@ function exerciseRecoveryBurden(exercise, recovery) {
 }
 
 function workoutTimeBudget(targetDuration) {
-  return Math.max(12, targetDuration * 0.9);
+  return Math.max(12, targetDuration);
+}
+
+function workoutMinimumMinutes(targetDuration) {
+  return workoutTimeBudget(targetDuration) * 0.92;
 }
 
 function estimatedExerciseMinutes(exercise) {
   const workSecondsPerSet = exercise.logging === "duration"
     ? 45
-    : exercise.style === "compound" ? 50 : 40;
+    : exercise.style === "compound" ? 45 : 35;
   const workSeconds = exercise.sets * workSecondsPerSet;
   const restSeconds = Math.max(0, exercise.sets - 1) * exercise.rest;
-  const setupSeconds = exercise.custom
-    ? 120
-    : exercise.style === "compound" ? 180 : 90;
-  const transitionSeconds = 75;
+  const setupSeconds = exercise.style === "compound" ? 90 : 45;
+  const transitionSeconds = 45;
   return (workSeconds + restSeconds + setupSeconds + transitionSeconds) / 60;
+}
+
+function addedSetMinutes(exercise) {
+  const workSeconds = exercise.logging === "duration"
+    ? 45
+    : exercise.style === "compound" ? 45 : 35;
+  return (workSeconds + exercise.rest) / 60;
+}
+
+function extendWorkoutTowardMinimum(exercises, currentMinutes, minimumMinutes, timeBudget) {
+  let estimatedMinutes = currentMinutes;
+
+  while (estimatedMinutes < minimumMinutes) {
+    const candidates = exercises
+      .filter((exercise) => {
+        const maximumSets = state.profile.duration > 75
+          ? (exercise.style === "compound" ? 6 : 5)
+          : (exercise.style === "compound" ? 5 : 4);
+        const muscleSets = exercises
+          .filter((item) => item.muscle === exercise.muscle)
+          .reduce((total, item) => total + item.sets, 0);
+        const muscleSetLimit = state.profile.duration > 75 ? 10 : 8;
+        return exercise.sets < maximumSets && muscleSets < muscleSetLimit;
+      })
+      .map((exercise) => ({ exercise, addedMinutes: addedSetMinutes(exercise) }))
+      .filter(({ addedMinutes }) => estimatedMinutes + addedMinutes <= timeBudget)
+      .sort((a, b) => {
+        const distanceA = Math.abs(minimumMinutes - (estimatedMinutes + a.addedMinutes));
+        const distanceB = Math.abs(minimumMinutes - (estimatedMinutes + b.addedMinutes));
+        return distanceA - distanceB;
+      });
+
+    const best = candidates[0];
+    if (!best) break;
+    best.exercise.sets += 1;
+    best.exercise.log.push(newLogSet(
+      best.exercise,
+      previousLoad(best.exercise, findLastExerciseEntry(best.exercise.id))
+    ));
+    estimatedMinutes += best.addedMinutes;
+  }
+
+  return estimatedMinutes;
 }
 
 function canAddExercise(chosen, candidate) {
   const sameMuscle = chosen.filter((exercise) => exercise.muscle === candidate.muscle);
   const directSets = sameMuscle.reduce((total, exercise) => total + exercise.sets, 0) + candidate.sets;
-  if (sameMuscle.length >= 2 || directSets > 7) return false;
+  const directSetLimit = state.profile.duration > 75 ? 10 : 7;
+  const exerciseLimit = state.profile.duration > 105 ? 3 : 2;
+  if (sameMuscle.length >= exerciseLimit || directSets > directSetLimit) return false;
 
   const repeatsMovement = chosen.some((exercise) => {
     return exercise.muscle === candidate.muscle && exercise.pattern === candidate.pattern;
@@ -645,7 +772,8 @@ function canAddExercise(chosen, candidate) {
   if (majorPresses.length > 2) return false;
 
   const fatigue = workoutFatigue([...chosen, candidate]);
-  return Object.values(fatigue).every((load) => load <= 5);
+  const fatigueLimit = state.profile.duration > 105 ? 7 : 5;
+  return Object.values(fatigue).every((load) => load <= fatigueLimit);
 }
 
 function workoutFatigue(exercises) {
@@ -662,7 +790,10 @@ function workoutFatigue(exercises) {
 function withPrescription(exercise) {
   const compound = exercise.style === "compound";
   const shortWorkout = state.profile.duration <= 30;
-  const sets = shortWorkout ? (compound ? 3 : 2) : (compound ? 4 : 3);
+  const longWorkout = state.profile.duration > 75 && state.profile.duration <= 105;
+  const sets = shortWorkout
+    ? (compound ? 3 : 2)
+    : longWorkout ? (compound ? 5 : 4) : (compound ? 4 : 3);
   const reps = exercise.logging === "duration" ? "30-45 sec" : compound ? "6-10" : "10-15";
   const last = findLastExerciseEntry(exercise.id);
   const lastLoad = previousLoad(exercise, last);
