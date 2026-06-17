@@ -236,12 +236,12 @@ function renderWorkout() {
           <span class="pill">${exercise.sets} x ${exercise.reps}</span>
           <span class="pill">${formatRestTime(exercise.rest)}</span>
         </div>
-        ${renderExerciseNote(exercise)}
       </div>
       <button class="swap-button" data-swap="${exercise.id}" aria-label="Swap ${exercise.name}" title="Swap Exercise">
         <span class="swap-arrows" aria-hidden="true"><span>→</span><span>←</span></span>
       </button>
       <div class="set-log" aria-label="Log sets for ${exercise.name}">
+        ${renderExerciseNote(exercise, "log")}
         ${renderSetRows(exercise)}
       </div>
     </article>
@@ -260,14 +260,32 @@ function renderWorkout() {
 
 function renderExerciseNote(exercise, location = "workout") {
   const note = getExerciseNote(exercise.id);
+  if (location === "log") {
+    return `
+      <div class="set-row note-row">
+        <div class="set-label">Notes</div>
+        <label class="note-log-field">
+          <textarea
+            data-exercise-note="${exercise.id}"
+            maxlength="140"
+            rows="2"
+            aria-label="Notes for ${escapeHtml(exercise.name)}"
+            placeholder="Tap to write"
+          >${escapeHtml(note)}</textarea>
+        </label>
+        <small class="note-count" data-note-count="${exercise.id}">${note.length}/140</small>
+      </div>
+    `;
+  }
+
   return `
     <label class="exercise-note ${location === "library" ? "is-library-note" : ""}">
-      <span>Your note <small data-note-count="${exercise.id}">${note.length}/140</small></span>
+      <span>Notes <small data-note-count="${exercise.id}">${note.length}/140</small></span>
       <textarea
         data-exercise-note="${exercise.id}"
         maxlength="140"
         rows="2"
-        aria-label="Your note for ${escapeHtml(exercise.name)}"
+        aria-label="Notes for ${escapeHtml(exercise.name)}"
         placeholder="Tap to write"
       >${escapeHtml(note)}</textarea>
     </label>
@@ -690,6 +708,34 @@ function exerciseRecoveryBurden(exercise, recovery) {
   return primaryBurden + secondaryBurden;
 }
 
+function exerciseFamily(exercise) {
+  if (!exercise) return "";
+  const id = exercise.id || "";
+  const name = (exercise.name || "").toLowerCase();
+
+  if (id.includes("push-up")) return "push-up";
+  if (id.includes("bench-press") || id === "machine-chest-press") return "chest-press";
+  if (id.includes("cable-fly") || id === "pec-deck") return "chest-fly";
+  if (id.includes("curl")) return "curl";
+  if (id.includes("triceps") || id.includes("skull-crusher") || id === "bench-dip") return "triceps-extension";
+  if (id.includes("lateral-raise")) return "lateral-raise";
+  if (id.includes("rear-delt") || id.includes("face-pull") || id.includes("reverse-dumbbell-fly")) return "rear-delt";
+  if (id.includes("shoulder-press") || id.includes("overhead-press") || id === "arnold-press") return "shoulder-press";
+  if (id.includes("row")) return "row";
+  if (id.includes("pull-up") || id.includes("chin-up") || id.includes("pulldown")) return "vertical-pull";
+  if (id.includes("lunge") || id.includes("split-squat") || id === "step-up") return "single-leg";
+  if (id.includes("squat") || id === "leg-press") return "squat";
+  if (id.includes("deadlift") || id.includes("romanian") || id.includes("hip-thrust") || id.includes("glute-bridge")) return "hinge";
+  if (id.includes("calf-raise")) return "calf-raise";
+  if (id.includes("leg-curl")) return "leg-curl";
+  if (id.includes("plank") || id.includes("hollow-body")) return "plank";
+  if (id.includes("dead-bug")) return "dead-bug";
+  if (id.includes("crunch")) return "crunch";
+  if (id.includes("hanging-") && (id.includes("raise") || name.includes("raise"))) return "hanging-raise";
+
+  return `${exercise.muscle}-${exercise.pattern || id}`;
+}
+
 function workoutTimeBudget(targetDuration) {
   return Math.max(12, targetDuration);
 }
@@ -718,6 +764,8 @@ function addedSetMinutes(exercise) {
 
 function extendWorkoutTowardMinimum(exercises, currentMinutes, minimumMinutes, timeBudget) {
   let estimatedMinutes = currentMinutes;
+  const priorityOrder = getPriorityOrder(state.profile);
+  const lowPriorityMuscles = new Set(priorityOrder.slice(-2));
 
   while (estimatedMinutes < minimumMinutes) {
     const candidates = exercises
@@ -732,14 +780,23 @@ function extendWorkoutTowardMinimum(exercises, currentMinutes, minimumMinutes, t
         return exercise.sets < maximumSets && muscleSets < muscleSetLimit;
       })
       .map((exercise) => ({ exercise, addedMinutes: addedSetMinutes(exercise) }))
-      .filter(({ addedMinutes }) => estimatedMinutes + addedMinutes <= timeBudget)
+      .filter(({ addedMinutes }) => estimatedMinutes + addedMinutes <= timeBudget);
+
+    const priorityCandidates = candidates.filter(({ exercise }) => {
+      return !lowPriorityMuscles.has(exercise.muscle);
+    });
+    const sortedCandidates = (priorityCandidates.length ? priorityCandidates : candidates)
       .sort((a, b) => {
+        const priorityA = priorityOrder.indexOf(a.exercise.muscle);
+        const priorityB = priorityOrder.indexOf(b.exercise.muscle);
+        if (priorityA !== priorityB) return priorityA - priorityB;
+
         const distanceA = Math.abs(minimumMinutes - (estimatedMinutes + a.addedMinutes));
         const distanceB = Math.abs(minimumMinutes - (estimatedMinutes + b.addedMinutes));
         return distanceA - distanceB;
       });
 
-    const best = candidates[0];
+    const best = sortedCandidates[0];
     if (!best) break;
     best.exercise.sets += 1;
     best.exercise.log.push(newLogSet(
@@ -758,6 +815,12 @@ function canAddExercise(chosen, candidate) {
   const directSetLimit = state.profile.duration > 75 ? 10 : 7;
   const exerciseLimit = state.profile.duration > 105 ? 3 : 2;
   if (sameMuscle.length >= exerciseLimit || directSets > directSetLimit) return false;
+
+  const candidateFamily = exerciseFamily(candidate);
+  const repeatsFamily = chosen.some((exercise) => {
+    return candidateFamily && exerciseFamily(exercise) === candidateFamily;
+  });
+  if (repeatsFamily) return false;
 
   const repeatsMovement = chosen.some((exercise) => {
     return exercise.muscle === candidate.muscle && exercise.pattern === candidate.pattern;
@@ -895,7 +958,7 @@ function swapExercise(mode) {
       showToast(`${original.name} restored.`);
     });
   } else {
-    showToast(replacement ? `Swapped to ${replacement.name}.` : "No close alternative found.");
+    showToast(replacement ? `Swapped to ${replacement.name}.` : "No safe swap available.");
   }
 }
 
@@ -912,19 +975,78 @@ function findReplacement(original) {
   const otherExercises = state.workout.exercises.filter((exercise) => exercise.id !== original.id);
   const currentMinutes = otherExercises.reduce((total, exercise) => total + estimatedExerciseMinutes(exercise), 0);
   const timeBudget = workoutTimeBudget(state.profile.duration);
-  const candidates = [
-    ...pool.filter((exercise) => exercise.muscle === original.muscle && exercise.pattern === original.pattern),
-    ...pool.filter((exercise) => exercise.muscle === original.muscle && exercise.style === original.style),
-    ...pool.filter((exercise) => exercise.muscle === original.muscle),
-    ...pool
-  ].filter((exercise, index, list) => list.findIndex((item) => item.id === exercise.id) === index);
+  const recovery = muscleRecoveryStatus();
+  const lastWorkoutIds = recentExerciseIds(1);
+  const recentWorkoutIds = recentExerciseIds(3);
+  const originalFamily = exerciseFamily(original);
+  const priorityOrder = getPriorityOrder(state.profile);
+  const originalPriorityIndex = priorityOrder.indexOf(original.muscle);
 
-  return candidates
+  const candidates = shuffleArray(pool)
     .map((exercise) => withPrescription(exercise))
-    .find((exercise) => {
+    .filter((exercise) => {
       return currentMinutes + estimatedExerciseMinutes(exercise) <= timeBudget
         && canAddExercise(otherExercises, exercise);
     });
+
+  const safeCandidates = candidates.filter((exercise) => exerciseRecoveryBurden(exercise, recovery) === 0);
+  const mildRecoveryCandidates = candidates.filter((exercise) => {
+    return (recovery[exercise.muscle] || 0) < 1 && exerciseRecoveryBurden(exercise, recovery) <= 15;
+  });
+  const recoveryPool = safeCandidates.length ? safeCandidates : mildRecoveryCandidates;
+
+  return recoveryPool
+    .sort((a, b) => {
+      const ladderA = swapLadderRank(a, original, originalFamily, priorityOrder, originalPriorityIndex, recentWorkoutIds);
+      const ladderB = swapLadderRank(b, original, originalFamily, priorityOrder, originalPriorityIndex, recentWorkoutIds);
+      if (ladderA !== ladderB) return ladderA - ladderB;
+
+      const lastWorkoutA = lastWorkoutIds.has(a.id) ? 1 : 0;
+      const lastWorkoutB = lastWorkoutIds.has(b.id) ? 1 : 0;
+      if (lastWorkoutA !== lastWorkoutB) return lastWorkoutA - lastWorkoutB;
+
+      const recoveryA = exerciseRecoveryBurden(a, recovery);
+      const recoveryB = exerciseRecoveryBurden(b, recovery);
+      if (recoveryA !== recoveryB) return recoveryA - recoveryB;
+
+      const priorityA = priorityDistance(a.muscle, priorityOrder, originalPriorityIndex);
+      const priorityB = priorityDistance(b.muscle, priorityOrder, originalPriorityIndex);
+      if (priorityA !== priorityB) return priorityA - priorityB;
+
+      const minutesA = Math.abs(timeBudget - (currentMinutes + estimatedExerciseMinutes(a)));
+      const minutesB = Math.abs(timeBudget - (currentMinutes + estimatedExerciseMinutes(b)));
+      return minutesA - minutesB;
+    })[0] || null;
+}
+
+function recentExerciseIds(limit) {
+  return new Set(state.history.slice(0, limit).flatMap((workout) => {
+    return workout.exerciseIds || workout.exercises?.map((exercise) => exercise.id) || [];
+  }));
+}
+
+function priorityDistance(muscle, priorityOrder, originalPriorityIndex) {
+  const index = priorityOrder.indexOf(muscle);
+  if (index < 0 || originalPriorityIndex < 0) return muscles.length;
+  return Math.abs(index - originalPriorityIndex);
+}
+
+function samePriorityTier(muscle, priorityOrder, originalPriorityIndex) {
+  return priorityDistance(muscle, priorityOrder, originalPriorityIndex) <= 1;
+}
+
+function swapLadderRank(exercise, original, originalFamily, priorityOrder, originalPriorityIndex, recentWorkoutIds) {
+  const recent = recentWorkoutIds.has(exercise.id);
+  const sameMuscle = exercise.muscle === original.muscle;
+  const sameFamily = exerciseFamily(exercise) === originalFamily;
+
+  if (sameMuscle && sameFamily && !recent) return 0;
+  if (sameMuscle && !sameFamily && !recent) return 1;
+  if (sameMuscle) return 2;
+  if (samePriorityTier(exercise.muscle, priorityOrder, originalPriorityIndex) && !recent) return 3;
+  if (samePriorityTier(exercise.muscle, priorityOrder, originalPriorityIndex)) return 4;
+  if (!recent) return 5;
+  return 6;
 }
 
 function openSwapSheet(id) {
