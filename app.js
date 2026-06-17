@@ -2,8 +2,8 @@ const muscles = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core"];
 const equipmentOptions = ["Dumbbells", "Barbell", "Cables", "Machines", "Bodyweight", "Kettlebells"];
 const RECOVERY_WINDOW_MS = 48 * 60 * 60 * 1000;
 const defaultProfile = {
-  priorities: { Chest: 3, Back: 4, Legs: 3, Shoulders: 5, Arms: 2, Core: 2 },
-  priorityOrder: ["Shoulders", "Back", "Chest", "Legs", "Arms", "Core"],
+  priorities: { Arms: 6, Back: 5, Chest: 4, Core: 3, Legs: 2, Shoulders: 1 },
+  priorityOrder: ["Arms", "Back", "Chest", "Core", "Legs", "Shoulders"],
   duration: 45,
   equipment: ["Dumbbells", "Cables", "Machines", "Bodyweight"]
 };
@@ -230,13 +230,13 @@ function renderWorkout() {
       <div class="exercise-main">
         <h3>${exercise.name}</h3>
         <p>${exercise.note}</p>
-        ${renderExerciseNote(exercise)}
         <div class="last-performance">${formatLastPerformance(exercise)}</div>
         <div class="exercise-meta">
           <span class="pill">${exercise.muscle}</span>
           <span class="pill">${exercise.sets} x ${exercise.reps}</span>
           <span class="pill">${formatRestTime(exercise.rest)}</span>
         </div>
+        ${renderExerciseNote(exercise)}
       </div>
       <button class="swap-button" data-swap="${exercise.id}" aria-label="Swap ${exercise.name}" title="Swap Exercise">
         <span class="swap-arrows" aria-hidden="true"><span>→</span><span>←</span></span>
