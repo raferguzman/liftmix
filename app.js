@@ -5,7 +5,7 @@ const defaultProfile = {
   priorities: { Arms: 6, Back: 5, Chest: 4, Core: 3, Legs: 2, Shoulders: 1 },
   priorityOrder: ["Arms", "Back", "Chest", "Core", "Legs", "Shoulders"],
   duration: 45,
-  equipment: ["Dumbbells", "Cables", "Machines", "Bodyweight"]
+  equipment: [...equipmentOptions]
 };
 
 let state = loadState();
@@ -520,6 +520,7 @@ function generateWorkout() {
   });
 
   const recentNames = new Set(state.history.slice(0, 3).flatMap((item) => item.exerciseIds));
+  const muscleAllocation = buildMuscleAllocation(profile, generationPool, recovery, timeBudget);
   const musclePlan = buildMusclePlan(profile, generationPool, recovery, maxMoves);
   const chosen = [];
   let estimatedMinutes = 0;
@@ -532,7 +533,8 @@ function generateWorkout() {
       chosen,
       recentNames,
       recovery,
-      timeBudget - estimatedMinutes
+      timeBudget - estimatedMinutes,
+      muscleAllocation
     );
     if (prescribed) {
       chosen.push(prescribed);
@@ -547,9 +549,7 @@ function generateWorkout() {
   while (chosen.length < maxMoves && estimatedMinutes < minimumMinutes && madeProgress) {
     madeProgress = false;
     const rankedFillOrder = [...fillOrder].sort((a, b) => {
-      const countA = chosen.filter((exercise) => exercise.muscle === a).length;
-      const countB = chosen.filter((exercise) => exercise.muscle === b).length;
-      return countA - countB;
+      return muscleAllocationNeed(b, chosen, muscleAllocation) - muscleAllocationNeed(a, chosen, muscleAllocation);
     });
 
     for (const muscle of rankedFillOrder) {
@@ -559,7 +559,8 @@ function generateWorkout() {
         chosen,
         recentNames,
         recovery,
-        timeBudget - estimatedMinutes
+        timeBudget - estimatedMinutes,
+        muscleAllocation
       );
       if (prescribed) {
         chosen.push(prescribed);
@@ -574,7 +575,8 @@ function generateWorkout() {
     chosen,
     estimatedMinutes,
     minimumMinutes,
-    timeBudget
+    timeBudget,
+    muscleAllocation
   );
 
   const focus = topMuscles(chosen).slice(0, 2).join(" + ") || "Balanced";
@@ -618,6 +620,51 @@ function rankAvailableMuscles(profile, pool, recovery) {
     });
 }
 
+function buildMuscleAllocation(profile, pool, recovery, timeBudget) {
+  const availableMuscles = rankAvailableMuscles(profile, pool, recovery);
+  const weighted = availableMuscles.map((muscle) => ({
+    muscle,
+    weight: Math.max(0.5, Math.pow(profile.priorities[muscle] || 1, 1.35) * (1 - (recovery[muscle] || 0) * 0.8))
+  }));
+  const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0) || 1;
+  const priorityOrder = getPriorityOrder(profile);
+  const allocation = {};
+
+  weighted.forEach(({ muscle, weight }) => {
+    const target = timeBudget * (weight / totalWeight);
+    const priorityRank = priorityOrder.indexOf(muscle);
+    const lowPriority = priorityRank >= muscles.length - 2;
+    const mediumPriority = priorityRank >= 2 && priorityRank < muscles.length - 2;
+    const duration = profile.duration;
+    let max = target * (duration > 75 ? 1.55 : 1.35) + (duration > 75 ? 3 : 1.5);
+
+    if (duration <= 60 && lowPriority) max = target * 1.2 + 1.5;
+    if (duration <= 30 && mediumPriority) max = target * 1.25 + 1;
+
+    allocation[muscle] = {
+      target,
+      max,
+      rank: priorityRank < 0 ? muscles.length : priorityRank,
+      lowPriority,
+      mediumPriority
+    };
+  });
+
+  allocation.order = availableMuscles;
+  return allocation;
+}
+
+function muscleAllocationNeed(muscle, chosen, allocation) {
+  const target = allocation[muscle]?.target || 0;
+  return target - muscleMinutes(chosen, muscle);
+}
+
+function muscleMinutes(exercises, muscle) {
+  return exercises
+    .filter((exercise) => exercise.muscle === muscle)
+    .reduce((total, exercise) => total + estimatedExerciseMinutes(exercise), 0);
+}
+
 function weightedMuscleChoice(candidates, profile, recovery) {
   if (!candidates.length) return null;
   const weighted = candidates.map((muscle) => ({
@@ -633,14 +680,14 @@ function weightedMuscleChoice(candidates, profile, recovery) {
   return weighted.at(-1).muscle;
 }
 
-function chooseExerciseForMuscle(muscle, pool, chosen, recentNames, recovery, minutesAvailable) {
+function chooseExerciseForMuscle(muscle, pool, chosen, recentNames, recovery, minutesAvailable, muscleAllocation = null) {
   const candidates = pool
     .filter((exercise) => exercise.muscle === muscle)
     .filter((exercise) => !chosen.some((picked) => picked.id === exercise.id))
     .map((exercise) => withPrescription(exercise))
     .filter((exercise) => {
       return estimatedExerciseMinutes(exercise) <= minutesAvailable
-        && canAddExercise(chosen, exercise);
+        && canAddExercise(chosen, exercise, muscleAllocation);
     });
 
   const lowerRecoveryBurden = candidates.filter((exercise) => {
@@ -762,7 +809,7 @@ function addedSetMinutes(exercise) {
   return (workSeconds + exercise.rest) / 60;
 }
 
-function extendWorkoutTowardMinimum(exercises, currentMinutes, minimumMinutes, timeBudget) {
+function extendWorkoutTowardMinimum(exercises, currentMinutes, minimumMinutes, timeBudget, muscleAllocation = null) {
   let estimatedMinutes = currentMinutes;
   const priorityOrder = getPriorityOrder(state.profile);
   const lowPriorityMuscles = new Set(priorityOrder.slice(-2));
@@ -780,7 +827,12 @@ function extendWorkoutTowardMinimum(exercises, currentMinutes, minimumMinutes, t
         return exercise.sets < maximumSets && muscleSets < muscleSetLimit;
       })
       .map((exercise) => ({ exercise, addedMinutes: addedSetMinutes(exercise) }))
-      .filter(({ addedMinutes }) => estimatedMinutes + addedMinutes <= timeBudget);
+      .filter(({ exercise, addedMinutes }) => {
+        if (estimatedMinutes + addedMinutes > timeBudget) return false;
+        const allocation = muscleAllocation?.[exercise.muscle];
+        if (!allocation) return true;
+        return muscleMinutes(exercises, exercise.muscle) + addedMinutes <= allocation.max;
+      });
 
     const priorityCandidates = candidates.filter(({ exercise }) => {
       return !lowPriorityMuscles.has(exercise.muscle);
@@ -809,12 +861,20 @@ function extendWorkoutTowardMinimum(exercises, currentMinutes, minimumMinutes, t
   return estimatedMinutes;
 }
 
-function canAddExercise(chosen, candidate) {
+function canAddExercise(chosen, candidate, muscleAllocation = null) {
   const sameMuscle = chosen.filter((exercise) => exercise.muscle === candidate.muscle);
   const directSets = sameMuscle.reduce((total, exercise) => total + exercise.sets, 0) + candidate.sets;
   const directSetLimit = state.profile.duration > 75 ? 10 : 7;
   const exerciseLimit = state.profile.duration > 105 ? 3 : 2;
   if (sameMuscle.length >= exerciseLimit || directSets > directSetLimit) return false;
+
+  const allocation = muscleAllocation?.[candidate.muscle];
+  if (allocation && sameMuscle.length > 0) {
+    const proposedMinutes = muscleMinutes(chosen, candidate.muscle) + estimatedExerciseMinutes(candidate);
+    if (proposedMinutes > allocation.max) return false;
+    if (state.profile.duration <= 60 && allocation.lowPriority) return false;
+    if (state.profile.duration <= 30 && allocation.mediumPriority) return false;
+  }
 
   const candidateFamily = exerciseFamily(candidate);
   const repeatsFamily = chosen.some((exercise) => {
@@ -835,7 +895,7 @@ function canAddExercise(chosen, candidate) {
   if (majorPresses.length > 2) return false;
 
   const fatigue = workoutFatigue([...chosen, candidate]);
-  const fatigueLimit = state.profile.duration > 105 ? 7 : 5;
+  const fatigueLimit = state.profile.duration > 105 ? 9 : state.profile.duration > 75 ? 7 : 5;
   return Object.values(fatigue).every((load) => load <= fatigueLimit);
 }
 
@@ -1237,14 +1297,24 @@ function showCenterNotice(titleText, messageText) {
 }
 
 function showToast(message, actionLabel, action) {
-  toast.innerHTML = `${message}${actionLabel ? ` <button type="button">${actionLabel}</button>` : ""}`;
+  toast.innerHTML = "";
+  const panel = document.createElement("div");
+  panel.className = "toast-panel";
+  const text = document.createElement("p");
+  text.textContent = message;
+  panel.appendChild(text);
   toast.classList.add("is-visible");
   if (actionLabel) {
-    toast.querySelector("button").addEventListener("click", () => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = actionLabel;
+    button.addEventListener("click", () => {
       toast.classList.remove("is-visible");
       action();
     }, { once: true });
+    panel.appendChild(button);
   }
+  toast.appendChild(panel);
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => toast.classList.remove("is-visible"), 3600);
 }
@@ -1357,10 +1427,24 @@ document.addEventListener("change", (event) => {
 let draggedPriorityItem = null;
 let priorityPlaceholder = null;
 let priorityDragOffsetY = 0;
+let pendingPriorityDrag = null;
 
 priorityList.addEventListener("pointerdown", (event) => {
-  const item = event.target.closest("[data-priority-muscle]");
-  if (!item) return;
+  const handle = event.target.closest(".priority-drag");
+  const item = handle?.closest("[data-priority-muscle]");
+  if (!handle || !item) return;
+
+  pendingPriorityDrag = {
+    item,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    timer: setTimeout(() => beginPriorityDrag(item, event), 160)
+  };
+});
+
+function beginPriorityDrag(item, event) {
+  if (!pendingPriorityDrag || pendingPriorityDrag.pointerId !== event.pointerId) return;
   const box = item.getBoundingClientRect();
   draggedPriorityItem = item;
   priorityDragOffsetY = event.clientY - box.top;
@@ -1375,9 +1459,21 @@ priorityList.addEventListener("pointerdown", (event) => {
   item.style.width = `${box.width}px`;
   item.style.zIndex = "30";
   item.setPointerCapture?.(event.pointerId);
-});
+  pendingPriorityDrag = null;
+}
+
+function cancelPendingPriorityDrag() {
+  if (!pendingPriorityDrag) return;
+  clearTimeout(pendingPriorityDrag.timer);
+  pendingPriorityDrag = null;
+}
 
 priorityList.addEventListener("pointermove", (event) => {
+  if (pendingPriorityDrag && pendingPriorityDrag.pointerId === event.pointerId) {
+    const deltaX = Math.abs(event.clientX - pendingPriorityDrag.startX);
+    const deltaY = Math.abs(event.clientY - pendingPriorityDrag.startY);
+    if (deltaX > 8 || deltaY > 8) cancelPendingPriorityDrag();
+  }
   if (!draggedPriorityItem) return;
   event.preventDefault();
   draggedPriorityItem.style.top = `${event.clientY - priorityDragOffsetY}px`;
@@ -1394,11 +1490,13 @@ priorityList.addEventListener("pointermove", (event) => {
 });
 
 priorityList.addEventListener("pointerup", (event) => {
+  if (pendingPriorityDrag?.pointerId === event.pointerId) cancelPendingPriorityDrag();
   if (!draggedPriorityItem) return;
   finishPriorityDrag(event.pointerId);
 });
 
 priorityList.addEventListener("pointercancel", (event) => {
+  if (pendingPriorityDrag?.pointerId === event.pointerId) cancelPendingPriorityDrag();
   if (!draggedPriorityItem) return;
   finishPriorityDrag(event.pointerId);
 });
@@ -1415,6 +1513,7 @@ function finishPriorityDrag(pointerId) {
   draggedPriorityItem = null;
   priorityPlaceholder = null;
   priorityDragOffsetY = 0;
+  pendingPriorityDrag = null;
   updatePriorityRanks();
 }
 

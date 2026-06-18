@@ -148,9 +148,34 @@ p {
 
 .page-reset-button > span {
   display: block;
-  font-size: 20px;
-  line-height: 1;
-  font-family: inherit;
+}
+
+.menu-dots,
+.menu-dots::before,
+.menu-dots::after {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.menu-dots {
+  position: relative;
+}
+
+.menu-dots::before,
+.menu-dots::after {
+  content: "";
+  position: absolute;
+  top: 0;
+}
+
+.menu-dots::before {
+  left: -9px;
+}
+
+.menu-dots::after {
+  right: -9px;
 }
 
 .page-reset-button[hidden] {
@@ -733,7 +758,7 @@ legend {
   border-radius: 8px;
   background: #f8f2e8;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
   transition:
     transform 180ms ease,
@@ -783,6 +808,8 @@ legend {
   color: var(--muted);
   font-size: 18px;
   font-weight: 900;
+  touch-action: none;
+  cursor: grab;
 }
 
 .equipment-grid {
@@ -1442,19 +1469,15 @@ select {
 
 .toast {
   position: fixed;
-  left: 50%;
-  bottom: calc(24px + env(safe-area-inset-bottom));
-  transform: translateX(-50%) translateY(18px);
-  width: min(calc(100vw - 32px), 390px);
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: #242729;
-  color: #fff;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(23, 23, 23, 0.16);
   opacity: 0;
   pointer-events: none;
   transition: 180ms ease;
   z-index: 20;
-  font-weight: 750;
 }
 
 .center-notice {
@@ -1535,13 +1558,42 @@ select {
 
 .toast.is-visible {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.toast-panel {
+  width: min(100%, 292px);
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 20px 18px;
+  border: 1px solid #d4cbbf;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  text-align: center;
+  box-shadow: 0 24px 58px rgba(0, 0, 0, 0.26);
+  transform: translateY(8px) scale(0.97);
+  transition: transform 180ms ease;
+}
+
+.toast.is-visible .toast-panel {
+  transform: translateY(0) scale(1);
+}
+
+.toast-panel p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 850;
 }
 
 .toast button {
-  margin-left: 10px;
-  background: transparent;
-  color: #84d7d2;
+  min-width: 96px;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
   font-weight: 900;
 }
 
