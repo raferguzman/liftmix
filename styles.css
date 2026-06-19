@@ -745,6 +745,9 @@ legend {
 .priority-list {
   display: grid;
   gap: 8px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .priority-item {
@@ -759,7 +762,9 @@ legend {
   background: #f8f2e8;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
   touch-action: pan-y;
+  -webkit-user-select: none;
   user-select: none;
+  -webkit-touch-callout: none;
   transition:
     transform 180ms ease,
     box-shadow 160ms ease,
@@ -803,13 +808,46 @@ legend {
 .priority-drag {
   width: 36px;
   height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   border-radius: 8px;
   background: #e7dfd2;
   color: var(--muted);
-  font-size: 18px;
-  font-weight: 900;
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   cursor: grab;
+}
+
+.priority-handle-icon {
+  position: relative;
+  width: 17px;
+  height: 14px;
+  display: block;
+}
+
+.priority-handle-icon,
+.priority-handle-icon::before,
+.priority-handle-icon::after {
+  border-top: 3px solid currentColor;
+}
+
+.priority-handle-icon::before,
+.priority-handle-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 17px;
+}
+
+.priority-handle-icon::before {
+  top: 5px;
+}
+
+.priority-handle-icon::after {
+  top: 10px;
 }
 
 .equipment-grid {

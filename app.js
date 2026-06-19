@@ -149,7 +149,9 @@ function renderSettings() {
     <div class="priority-item" data-priority-muscle="${muscle}">
       <span class="priority-rank">${index + 1}</span>
       <span class="priority-name">${muscle}</span>
-      <button class="priority-drag" type="button" aria-label="Drag ${muscle} priority" title="Drag">☰</button>
+      <button class="priority-drag" type="button" aria-label="Drag ${muscle} priority" title="Drag">
+        <span class="priority-handle-icon" aria-hidden="true"></span>
+      </button>
     </div>
   `).join("");
 
@@ -1434,6 +1436,7 @@ priorityList.addEventListener("pointerdown", (event) => {
   const item = handle?.closest("[data-priority-muscle]");
   if (!handle || !item) return;
 
+  event.preventDefault();
   pendingPriorityDrag = {
     item,
     pointerId: event.pointerId,
