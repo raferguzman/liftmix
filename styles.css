@@ -822,32 +822,17 @@ legend {
 }
 
 .priority-handle-icon {
-  position: relative;
   width: 17px;
-  height: 14px;
+  height: 13px;
   display: block;
-}
-
-.priority-handle-icon,
-.priority-handle-icon::before,
-.priority-handle-icon::after {
-  border-top: 3px solid currentColor;
-}
-
-.priority-handle-icon::before,
-.priority-handle-icon::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  width: 17px;
-}
-
-.priority-handle-icon::before {
-  top: 5px;
-}
-
-.priority-handle-icon::after {
-  top: 10px;
+  background: linear-gradient(
+    to bottom,
+    currentColor 0 3px,
+    transparent 3px 5px,
+    currentColor 5px 8px,
+    transparent 8px 10px,
+    currentColor 10px 13px
+  );
 }
 
 .equipment-grid {
