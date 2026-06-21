@@ -77,7 +77,15 @@ function normalizeState(nextState) {
   const exerciseNotes = nextState.exerciseNotes && typeof nextState.exerciseNotes === "object"
     ? nextState.exerciseNotes
     : {};
-  return { ...nextState, profile, customExercises, exerciseNotes };
+  const workout = nextState.workout
+    ? {
+        ...nextState.workout,
+        swappedOutIds: Array.isArray(nextState.workout.swappedOutIds)
+          ? nextState.workout.swappedOutIds
+          : []
+      }
+    : null;
+  return { ...nextState, profile, customExercises, exerciseNotes, workout };
 }
 
 function getExerciseLibrary() {
@@ -586,7 +594,8 @@ function generateWorkout() {
     id: Date.now(),
     duration: `${targetDuration}m`,
     focus,
-    exercises: chosen
+    exercises: chosen,
+    swappedOutIds: []
   };
   saveState();
 }
@@ -1006,6 +1015,9 @@ function swapExercise(mode) {
   const replacement = findReplacement(original);
   if (replacement) {
     state.workout.exercises[index] = replacement;
+    state.workout.swappedOutIds = [
+      ...new Set([...(state.workout.swappedOutIds || []), original.id])
+    ];
     state.workout.focus = topMuscles(state.workout.exercises).slice(0, 2).join(" + ");
   }
 
@@ -1028,6 +1040,7 @@ function findReplacement(original) {
   const unavailable = new Set([
     original.id,
     ...state.excluded,
+    ...(state.workout?.swappedOutIds || []),
     ...(state.workout?.exercises || []).map((exercise) => exercise.id)
   ]);
   const pool = getExerciseLibrary().filter((exercise) => {
