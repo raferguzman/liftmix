@@ -589,12 +589,21 @@ function generateWorkout() {
     muscleAllocation
   );
 
-  const focus = topMuscles(chosen).slice(0, 2).join(" + ") || "Balanced";
+  const ordered = orderWorkoutForGymFlow(chosen, profile);
+  estimatedMinutes = extendWorkoutTowardMinimum(
+    ordered,
+    estimatedOrderedWorkoutMinutes(ordered),
+    minimumMinutes,
+    timeBudget,
+    muscleAllocation
+  );
+
+  const focus = topMuscles(ordered).slice(0, 2).join(" + ") || "Balanced";
   state.workout = {
     id: Date.now(),
     duration: `${targetDuration}m`,
     focus,
-    exercises: chosen,
+    exercises: ordered,
     swappedOutIds: []
   };
   saveState();
@@ -757,6 +766,81 @@ function secondaryMusclesForExercise(exercise) {
   if (exercise.muscle === "Back") return ["Arms"];
   if (exercise.muscle === "Legs" && ["squat", "hinge"].includes(exercise.pattern)) return ["Core"];
   return [];
+}
+
+function orderWorkoutForGymFlow(exercises, profile) {
+  if (exercises.length < 2) return [...exercises];
+  const priorityOrder = getPriorityOrder(profile);
+  const originalIndex = new Map(exercises.map((exercise, index) => [exercise.id, index]));
+  const beamWidth = exercises.length > 10 ? 100 : 180;
+  let paths = [{ ordered: [], remaining: [...exercises], score: 0 }];
+
+  while (paths[0]?.remaining.length) {
+    const expanded = [];
+    paths.forEach((path) => {
+      path.remaining.forEach((candidate) => {
+        const previous = path.ordered.at(-1) || null;
+        const compoundsRemain = path.remaining.some((exercise) => {
+          return exercise.id !== candidate.id && exercise.style === "compound";
+        });
+        const nextScore = path.score
+          + gymFlowStepScore(candidate, previous, path.ordered.length, compoundsRemain, priorityOrder, originalIndex);
+        expanded.push({
+          ordered: [...path.ordered, candidate],
+          remaining: path.remaining.filter((exercise) => exercise.id !== candidate.id),
+          score: nextScore
+        });
+      });
+    });
+    paths = expanded.sort((a, b) => a.score - b.score).slice(0, beamWidth);
+  }
+
+  return paths[0]?.ordered || [...exercises];
+}
+
+function gymFlowStepScore(candidate, previous, position, compoundsRemain, priorityOrder, originalIndex) {
+  const priorityRank = Math.max(0, priorityOrder.indexOf(candidate.muscle));
+  const earlyPositionWeight = Math.max(0.25, 1 - position * 0.12);
+  let score = priorityRank * 0.35 * earlyPositionWeight
+    + (originalIndex.get(candidate.id) || 0) * 0.03 * earlyPositionWeight;
+
+  if (position === 0 && candidate.style === "accessory") score += 7;
+  if (compoundsRemain && candidate.style === "accessory") score += 4;
+  if (!previous) return score;
+
+  score += adjacentFatiguePenalty(previous, candidate);
+  score += equipmentTransitionScore(previous.equipment, candidate.equipment);
+  if (exerciseFamily(previous) === exerciseFamily(candidate)) score += 4;
+  return score;
+}
+
+function adjacentFatiguePenalty(previous, candidate) {
+  const previousSecondary = secondaryMusclesForExercise(previous);
+  const candidateSecondary = secondaryMusclesForExercise(candidate);
+  let penalty = previous.muscle === candidate.muscle ? 12 : 0;
+  if (previousSecondary.includes(candidate.muscle)) penalty += 6;
+  if (candidateSecondary.includes(previous.muscle)) penalty += 6;
+  penalty += previousSecondary.filter((muscle) => candidateSecondary.includes(muscle)).length * 2;
+  return penalty;
+}
+
+function equipmentTransitionScore(previousEquipment, nextEquipment) {
+  if (previousEquipment !== nextEquipment) return 1;
+  if (previousEquipment === "Machines") return -1;
+  if (previousEquipment === "Bodyweight") return -0.5;
+  return -5;
+}
+
+function estimatedOrderedWorkoutMinutes(exercises) {
+  const baseMinutes = exercises.reduce((total, exercise) => total + estimatedExerciseMinutes(exercise), 0);
+  const savedSeconds = exercises.slice(1).reduce((total, exercise, index) => {
+    const previous = exercises[index];
+    if (previous.equipment !== exercise.equipment) return total;
+    if (exercise.equipment === "Machines") return total;
+    if (exercise.equipment === "Cables") return total + 20;
+    return total + 15;
+  }, 0);
+  return Math.max(0, baseMinutes - savedSeconds / 60);
 }
 
 function exerciseRecoveryBurden(exercise, recovery) {
