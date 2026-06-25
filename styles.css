@@ -467,9 +467,9 @@ p {
 
 .exercise-note textarea {
   width: 100%;
-  min-height: 48px;
-  max-height: 68px;
+  height: 48px;
   resize: none;
+  overflow-y: auto;
   padding: 8px 9px;
   border: 1px solid #d2c9bc;
   border-radius: 8px;
@@ -488,7 +488,6 @@ p {
 }
 
 .exercise-note textarea:focus {
-  min-height: 68px;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(23, 111, 107, 0.12);
 }
@@ -548,9 +547,9 @@ p {
 
 .note-log-field textarea {
   width: 100%;
-  min-height: 44px;
-  max-height: 68px;
+  height: 44px;
   resize: none;
+  overflow-y: auto;
   padding: 8px 9px;
   border: 1px solid #d2c9bc;
   border-radius: 8px;
@@ -569,7 +568,6 @@ p {
 }
 
 .note-log-field textarea:focus {
-  min-height: 68px;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(23, 111, 107, 0.12);
 }
@@ -1007,11 +1005,7 @@ select {
 }
 
 .exercise-note.is-library-note textarea {
-  min-height: 40px;
-}
-
-.exercise-note.is-library-note textarea:focus {
-  min-height: 68px;
+  height: 40px;
 }
 
 .custom-exercise-menu + .status-toggle {
@@ -1225,17 +1219,17 @@ select {
 .tab-barbell {
   position: relative;
   display: block;
-  width: 38px;
+  width: 40px;
   height: 16px;
   color: currentColor;
 }
 
 .barbell-bar {
   position: absolute;
-  top: 7px;
-  left: 0;
-  width: 38px;
-  height: 2px;
+  top: 7.5px;
+  left: 5px;
+  width: 30px;
+  height: 1px;
   border-radius: 999px;
   background: currentColor;
 }
@@ -1243,7 +1237,7 @@ select {
 .barbell-plate {
   position: absolute;
   top: 50%;
-  width: 4px;
+  width: 2px;
   border-radius: 0;
   background: currentColor;
   transform: translateY(-50%);
@@ -1253,24 +1247,36 @@ select {
   height: 15px;
 }
 
+.barbell-plate.middle {
+  height: 12px;
+}
+
 .barbell-plate.outer {
-  height: 10px;
+  height: 8px;
 }
 
 .barbell-plate.outer.left {
-  left: 2px;
-}
-
-.barbell-plate.inner.left {
   left: 7px;
 }
 
+.barbell-plate.middle.left {
+  left: 10px;
+}
+
+.barbell-plate.inner.left {
+  left: 13px;
+}
+
 .barbell-plate.inner.right {
-  right: 7px;
+  right: 13px;
+}
+
+.barbell-plate.middle.right {
+  right: 10px;
 }
 
 .barbell-plate.outer.right {
-  right: 2px;
+  right: 7px;
 }
 
 .tab-controls {
