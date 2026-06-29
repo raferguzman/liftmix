@@ -243,7 +243,7 @@ function renderWorkout() {
         <div class="last-performance">${formatLastPerformance(exercise)}</div>
         <div class="exercise-meta">
           <span class="pill">${exercise.muscle}</span>
-          <span class="pill">${exercise.sets} x ${exercise.reps}</span>
+          <span class="pill">${formatRepTarget(exercise)}</span>
           <span class="pill">${formatRestTime(exercise.rest)}</span>
         </div>
       </div>
@@ -268,6 +268,10 @@ function renderWorkout() {
   `;
 }
 
+function formatRepTarget(exercise) {
+  return exercise.logging === "duration" ? exercise.reps : `${exercise.reps} reps`;
+}
+
 function renderExerciseNote(exercise, location = "workout") {
   const note = getExerciseNote(exercise.id);
   if (location === "log") {
@@ -278,7 +282,6 @@ function renderExerciseNote(exercise, location = "workout") {
           <textarea
             data-exercise-note="${exercise.id}"
             maxlength="140"
-            rows="2"
             aria-label="Notes for ${escapeHtml(exercise.name)}"
             placeholder="Tap to write"
           >${escapeHtml(note)}</textarea>
@@ -294,7 +297,6 @@ function renderExerciseNote(exercise, location = "workout") {
       <textarea
         data-exercise-note="${exercise.id}"
         maxlength="140"
-        rows="2"
         aria-label="Notes for ${escapeHtml(exercise.name)}"
         placeholder="Tap to write"
       >${escapeHtml(note)}</textarea>
