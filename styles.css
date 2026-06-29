@@ -1128,10 +1128,23 @@ select {
   gap: 2px;
 }
 
-.history-exercise span {
+.history-exercise-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-exercise-heading > span:first-child {
+  min-width: 0;
   color: var(--ink);
   font-size: 13px;
   font-weight: 850;
+}
+
+.history-exercise-heading .pill {
+  flex: 0 0 auto;
+  padding: 4px 8px;
 }
 
 .history-exercise small {

@@ -226,7 +226,7 @@ function renderWorkout() {
       <div class="empty-state">
         <div class="mini-plate" aria-hidden="true"></div>
         <h3>No workout generated yet</h3>
-        <p>Your saved settings stay ready. Tap Generate Workout when you get to the gym.</p>
+        <p>Your saved settings stay ready.<br />Tap Generate Workout when you<br />get to the gym.</p>
       </div>
     `;
     return;
@@ -500,13 +500,24 @@ function formatHistoryExercises(item) {
     ? item.exercises
     : item.exerciseNames.map((name, index) => ({ id: item.exerciseIds[index], name, sets: [] }));
 
-  return exercises.map((exercise) => `
+  return exercises.map((exercise) => {
+    const muscle = historyExerciseMuscle(exercise);
+    return `
     <div class="history-exercise">
-      <span>${exercise.name}</span>
+      <div class="history-exercise-heading">
+        <span>${exercise.name}</span>
+        ${muscle ? `<span class="pill">${muscle}</span>` : ""}
+      </div>
       <small>${formatHistorySets(exercise.sets, exercise.logging)}</small>
       ${exercise.noteSnapshot ? `<p class="history-note"><strong>Note:</strong> ${escapeHtml(exercise.noteSnapshot)}</p>` : ""}
     </div>
-  `).join("");
+  `;
+  }).join("");
+}
+
+function historyExerciseMuscle(exercise) {
+  if (exercise.muscle) return exercise.muscle;
+  return getExerciseLibrary().find((item) => item.id === exercise.id)?.muscle || "";
 }
 
 function formatHistorySets(sets = [], logging = "weight") {
