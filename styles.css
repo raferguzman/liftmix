@@ -464,9 +464,9 @@ p {
   display: block;
   box-sizing: border-box;
   width: 100%;
-  height: 46px;
-  min-height: 46px;
-  max-height: 46px;
+  height: 56px;
+  min-height: 56px;
+  max-height: 56px;
   appearance: none;
   resize: none;
   overflow-y: auto;
@@ -477,14 +477,14 @@ p {
   background: #fffdfa;
   color: var(--ink);
   font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.3;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.25;
 }
 
 .exercise-note textarea::placeholder {
   color: #989188;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .exercise-note textarea:focus {
@@ -535,11 +535,11 @@ p {
 .note-row {
   grid-template-columns: 44px minmax(0, 1fr) 34px;
   align-items: start;
-  min-height: 46px;
+  min-height: 56px;
 }
 
 .note-row .set-label {
-  padding-top: 7px;
+  padding-top: 9px;
 }
 
 .note-log-field {
@@ -552,9 +552,9 @@ p {
   display: block;
   box-sizing: border-box;
   width: 100%;
-  height: 46px;
-  min-height: 46px;
-  max-height: 46px;
+  height: 56px;
+  min-height: 56px;
+  max-height: 56px;
   appearance: none;
   resize: none;
   overflow-y: auto;
@@ -565,14 +565,14 @@ p {
   background: #fffdfa;
   color: var(--ink);
   font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.3;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.25;
 }
 
 .note-log-field textarea::placeholder {
   color: #989188;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .note-log-field textarea:focus {
@@ -1005,9 +1005,9 @@ select {
 }
 
 .exercise-note.is-library-note textarea {
-  height: 46px;
-  min-height: 46px;
-  max-height: 46px;
+  height: 56px;
+  min-height: 56px;
+  max-height: 56px;
 }
 
 .custom-exercise-menu + .status-toggle {
@@ -1234,7 +1234,7 @@ select {
 .tab-barbell {
   position: relative;
   display: block;
-  width: 58px;
+  width: 56px;
   height: 16px;
   color: currentColor;
 }
@@ -1242,7 +1242,7 @@ select {
 .barbell-bar {
   position: absolute;
   top: 7.5px;
-  left: 4px;
+  left: 3px;
   width: 50px;
   height: 1px;
   border-radius: 999px;
