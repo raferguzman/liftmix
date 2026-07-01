@@ -1474,6 +1474,14 @@ select {
   margin-top: 16px;
 }
 
+#cancel-workout-backdrop .sheet-actions button {
+  min-height: 52px;
+  padding: 0 12px;
+  font-size: 13px;
+  line-height: 1.15;
+  text-align: center;
+}
+
 .exercise-form {
   display: grid;
   gap: 13px;
