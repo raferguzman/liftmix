@@ -282,21 +282,22 @@ function renderExerciseNote(exercise, location = "workout") {
           <textarea
             data-exercise-note="${exercise.id}"
             maxlength="140"
+            enterkeyhint="done"
             aria-label="Notes for ${escapeHtml(exercise.name)}"
             placeholder="Tap to write"
           >${escapeHtml(note)}</textarea>
         </label>
-        <small class="note-count" data-note-count="${exercise.id}">${note.length}/140</small>
       </div>
     `;
   }
 
   return `
     <label class="exercise-note ${location === "library" ? "is-library-note" : ""}">
-      <span>Notes <small data-note-count="${exercise.id}">${note.length}/140</small></span>
+      <span>Notes</span>
       <textarea
         data-exercise-note="${exercise.id}"
         maxlength="140"
+        enterkeyhint="done"
         aria-label="Notes for ${escapeHtml(exercise.name)}"
         placeholder="Tap to write"
       >${escapeHtml(note)}</textarea>
@@ -1509,11 +1510,15 @@ document.addEventListener("input", (event) => {
     document.querySelectorAll("[data-exercise-note]").forEach((field) => {
       if (field !== event.target && field.dataset.exerciseNote === exerciseId) field.value = note;
     });
-    document.querySelectorAll("[data-note-count]").forEach((counter) => {
-      if (counter.dataset.noteCount === exerciseId) counter.textContent = `${note.length}/140`;
-    });
     persistState();
   }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (!event.target.matches("[data-exercise-note]")) return;
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  event.target.blur();
 });
 
 document.addEventListener("change", (event) => {
@@ -1715,7 +1720,9 @@ document.addEventListener("pointerdown", (event) => {
   const row = event.target.closest("[data-history-row]");
   if (!row) return;
   row.dataset.startX = event.clientX;
+  row.dataset.startY = event.clientY;
   row.dataset.currentX = "0";
+  row.dataset.swipeIntent = "pending";
   row.classList.add("is-swiping");
 });
 
@@ -1723,7 +1730,23 @@ document.addEventListener("pointermove", (event) => {
   const row = event.target.closest("[data-history-row]");
   if (!row?.classList.contains("is-swiping")) return;
   const startX = Number(row.dataset.startX);
-  const delta = Math.min(0, Math.max(-92, event.clientX - startX));
+  const startY = Number(row.dataset.startY);
+  const rawDeltaX = event.clientX - startX;
+  const rawDeltaY = event.clientY - startY;
+  const horizontal = Math.abs(rawDeltaX);
+  const vertical = Math.abs(rawDeltaY);
+
+  if (row.dataset.swipeIntent === "pending") {
+    if (vertical > 8 && vertical > horizontal) {
+      resetHistorySwipe(row);
+      return;
+    }
+    if (horizontal < 22 || horizontal < vertical * 1.6) return;
+    row.dataset.swipeIntent = "horizontal";
+  }
+
+  if (row.dataset.swipeIntent !== "horizontal") return;
+  const delta = Math.min(0, Math.max(-92, rawDeltaX));
   row.dataset.currentX = String(delta);
   row.querySelector("[data-swipe-content]").style.transform = `translateX(${delta}px)`;
 });
@@ -1732,11 +1755,29 @@ document.addEventListener("pointerup", (event) => {
   const row = document.querySelector(".swipe-row.is-swiping");
   if (!row) return;
   const delta = Number(row.dataset.currentX || 0);
-  const open = delta < -42;
+  const open = row.dataset.swipeIntent === "horizontal" && delta < -68;
   row.classList.toggle("is-open", open);
   row.querySelector("[data-swipe-content]").style.transform = open ? "translateX(-82px)" : "";
-  row.classList.remove("is-swiping");
+  resetHistorySwipe(row, true);
 });
+
+document.addEventListener("pointercancel", () => {
+  const row = document.querySelector(".swipe-row.is-swiping");
+  if (row) resetHistorySwipe(row);
+});
+
+function resetHistorySwipe(row, keepOpenState = false) {
+  if (!keepOpenState) {
+    row.classList.remove("is-open");
+    const content = row.querySelector("[data-swipe-content]");
+    if (content) content.style.transform = "";
+  }
+  row.classList.remove("is-swiping");
+  delete row.dataset.startX;
+  delete row.dataset.startY;
+  delete row.dataset.currentX;
+  delete row.dataset.swipeIntent;
+}
 
 function updateCompletionButtons(exercise) {
   const card = document.querySelector(`[data-complete="${exercise.id}"]`)?.closest(".exercise-card");

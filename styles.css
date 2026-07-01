@@ -460,22 +460,17 @@ p {
   text-transform: uppercase;
 }
 
-.exercise-note > span small {
-  color: #918a81;
-  font-size: 10px;
-}
-
 .exercise-note textarea {
   display: block;
   box-sizing: border-box;
   width: 100%;
-  height: 48px;
-  min-height: 48px;
-  max-height: 48px;
+  height: 46px;
+  min-height: 46px;
+  max-height: 46px;
   appearance: none;
   resize: none;
   overflow-y: auto;
-  padding: 8px 9px;
+  padding: 7px 9px;
   border: 1px solid #d2c9bc;
   border-radius: 8px;
   outline: 0;
@@ -538,17 +533,18 @@ p {
 }
 
 .note-row {
+  grid-template-columns: 44px minmax(0, 1fr) 34px;
   align-items: start;
-  min-height: 44px;
+  min-height: 46px;
 }
 
 .note-row .set-label {
-  padding-top: 8px;
+  padding-top: 7px;
 }
 
 .note-log-field {
   display: block;
-  grid-column: 2 / 4;
+  grid-column: 2 / -1;
   min-width: 0;
 }
 
@@ -556,13 +552,13 @@ p {
   display: block;
   box-sizing: border-box;
   width: 100%;
-  height: 44px;
-  min-height: 44px;
-  max-height: 44px;
+  height: 46px;
+  min-height: 46px;
+  max-height: 46px;
   appearance: none;
   resize: none;
   overflow-y: auto;
-  padding: 8px 9px;
+  padding: 7px 9px;
   border: 1px solid #d2c9bc;
   border-radius: 8px;
   outline: 0;
@@ -582,14 +578,6 @@ p {
 .note-log-field textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(23, 111, 107, 0.12);
-}
-
-.note-count {
-  padding-top: 9px;
-  color: #918a81;
-  font-size: 10px;
-  font-weight: 850;
-  text-align: right;
 }
 
 .set-label {
@@ -1017,7 +1005,9 @@ select {
 }
 
 .exercise-note.is-library-note textarea {
-  height: 40px;
+  height: 46px;
+  min-height: 46px;
+  max-height: 46px;
 }
 
 .custom-exercise-menu + .status-toggle {
