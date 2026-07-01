@@ -71,6 +71,7 @@ function loadState() {
 
 function normalizeState(nextState) {
   const profile = { ...defaultProfile, ...(nextState.profile || {}) };
+  profile.duration = normalizeDuration(profile.duration);
   profile.priorityOrder = getPriorityOrder(profile);
   profile.priorities = prioritiesFromOrder(profile.priorityOrder);
   const customExercises = Array.isArray(nextState.customExercises) ? nextState.customExercises : [];
@@ -188,8 +189,12 @@ function durationSelectionValue() {
 
 function selectedDurationFromForm(data) {
   if (data.get("duration") !== "custom") return Number(data.get("duration"));
-  const customValue = Number(data.get("customDuration"));
-  return Math.min(120, Math.max(20, customValue || 40));
+  return normalizeDuration(data.get("customDuration"), 40);
+}
+
+function normalizeDuration(value, fallback = defaultProfile.duration) {
+  const duration = Math.round(Number(value));
+  return Math.min(120, Math.max(5, Number.isFinite(duration) && duration > 0 ? duration : fallback));
 }
 
 function renderCustomDuration() {
@@ -533,7 +538,9 @@ function generateWorkout() {
   const targetDuration = profile.duration;
   const timeBudget = workoutTimeBudget(targetDuration);
   const minimumMinutes = workoutMinimumMinutes(targetDuration);
-  const maxMoves = Math.min(18, Math.max(2, Math.ceil(targetDuration / 7)));
+  const maxMoves = targetDuration <= 10
+    ? 1
+    : Math.min(18, Math.max(2, Math.ceil(targetDuration / 7)));
   const pool = getExerciseLibrary().filter((exercise) => {
     return profile.equipment.includes(exercise.equipment) && !state.excluded.includes(exercise.id);
   });
@@ -637,6 +644,7 @@ function buildMusclePlan(profile, pool, recovery, maxMoves) {
 }
 
 function targetMuscleGroupCount(duration) {
+  if (duration <= 10) return 1;
   if (duration <= 20) return 2;
   if (duration <= 30) return 3;
   if (duration <= 45) return 4;
@@ -893,7 +901,7 @@ function exerciseFamily(exercise) {
 }
 
 function workoutTimeBudget(targetDuration) {
-  return Math.max(12, targetDuration);
+  return Math.max(5, targetDuration);
 }
 
 function workoutMinimumMinutes(targetDuration) {
@@ -1021,9 +1029,12 @@ function workoutFatigue(exercises) {
 
 function withPrescription(exercise) {
   const compound = exercise.style === "compound";
+  const miniWorkout = state.profile.duration <= 10;
   const shortWorkout = state.profile.duration <= 30;
   const longWorkout = state.profile.duration > 75 && state.profile.duration <= 105;
-  const sets = shortWorkout
+  const sets = miniWorkout
+    ? (compound ? 1 : 2)
+    : shortWorkout
     ? (compound ? 3 : 2)
     : longWorkout ? (compound ? 5 : 4) : (compound ? 4 : 3);
   const reps = exercise.logging === "duration" ? "30-45 sec" : compound ? "6-10" : "10-15";
