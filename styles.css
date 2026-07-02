@@ -7,8 +7,9 @@
   --line: #ded7cc;
   --panel: #fffdfa;
   --panel-2: #ece5da;
-  --accent: #176f6b;
-  --accent-strong: #0f5552;
+  /* Original teal scheme: --accent #176f6b; --accent-strong #0f5552. */
+  --accent: #5f6f3b;
+  --accent-strong: #3f4a28;
   --warm: #c45432;
   --danger: #b94033;
   --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
@@ -229,7 +230,7 @@ p {
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(23, 111, 107, 0.12), rgba(196, 84, 50, 0.08)),
+    linear-gradient(135deg, rgba(95, 111, 59, 0.14), rgba(196, 84, 50, 0.08)),
     var(--panel);
 }
 
@@ -249,7 +250,7 @@ p {
 .primary-action {
   color: #fff;
   background: var(--accent);
-  box-shadow: 0 10px 22px rgba(23, 111, 107, 0.22);
+  box-shadow: 0 10px 22px rgba(95, 111, 59, 0.24);
 }
 
 .primary-action:active {
@@ -489,7 +490,7 @@ p {
 
 .exercise-note textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(23, 111, 107, 0.12);
+  box-shadow: 0 0 0 3px rgba(95, 111, 59, 0.14);
 }
 
 .exercise-meta {
@@ -577,7 +578,7 @@ p {
 
 .note-log-field textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(23, 111, 107, 0.12);
+  box-shadow: 0 0 0 3px rgba(95, 111, 59, 0.14);
 }
 
 .set-label {
@@ -774,16 +775,16 @@ legend {
 .priority-item.is-dragging {
   background: #fffdfa;
   border-color: var(--accent);
-  box-shadow: 0 18px 34px rgba(23, 111, 107, 0.24);
+  box-shadow: 0 18px 34px rgba(95, 111, 59, 0.24);
   cursor: grabbing;
   pointer-events: none;
   transform: scale(1.03);
 }
 
 .priority-placeholder {
-  border: 1px dashed rgba(23, 111, 107, 0.46);
+  border: 1px dashed rgba(95, 111, 59, 0.46);
   border-radius: 8px;
-  background: rgba(23, 111, 107, 0.08);
+  background: rgba(95, 111, 59, 0.10);
   transition: height 160ms ease;
 }
 
@@ -883,7 +884,7 @@ legend {
 }
 
 .check-tile input:focus-visible {
-  outline: 3px solid rgba(23, 111, 107, 0.24);
+  outline: 3px solid rgba(95, 111, 59, 0.24);
   outline-offset: 2px;
 }
 
@@ -1148,7 +1149,7 @@ select {
   margin: 3px 0 0;
   padding: 7px 8px;
   border-left: 3px solid var(--accent);
-  background: rgba(23, 111, 107, 0.08);
+  background: rgba(95, 111, 59, 0.10);
   color: #514d47;
   font-size: 12px;
   font-weight: 700;

@@ -101,7 +101,6 @@ const builtInExerciseLibrary = [
   { id: "bird-dog", name: "Bird Dog", muscle: "Core", equipment: "Bodyweight", pattern: "anti-rotation", style: "accessory", logging: "reps", note: "Reach opposite arm and leg while keeping hips level." },
   { id: "cable-chop", name: "Cable Chop", muscle: "Core", equipment: "Cables", pattern: "rotation", style: "accessory", logging: "weight", note: "Move diagonally with control and keep your hips stable." },
   { id: "cable-crunch", name: "Cable Crunch", muscle: "Core", equipment: "Cables", pattern: "flexion", style: "accessory", logging: "weight", note: "Curl your ribs toward your hips without pulling with your arms." },
-  { id: "dead-bug", name: "Dead Bug", muscle: "Core", equipment: "Bodyweight", pattern: "anti-extension", style: "accessory", logging: "reps", note: "Lower opposite arm and leg while keeping your back down." },
   { id: "hanging-knee-raise", name: "Hanging Knee Raise", muscle: "Core", equipment: "Bodyweight", pattern: "flexion", style: "accessory", logging: "reps", note: "Lift your knees without swinging." },
   { id: "hanging-leg-raise", name: "Hanging Leg Raise", muscle: "Core", equipment: "Bodyweight", pattern: "flexion", style: "accessory", logging: "reps", note: "Keep your legs controlled and avoid using momentum." },
   { id: "hollow-body-hold", name: "Hollow-Body Hold", muscle: "Core", equipment: "Bodyweight", pattern: "anti-extension", style: "accessory", logging: "duration", note: "Press your lower back down and keep the shape you can hold." },
