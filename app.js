@@ -148,9 +148,9 @@ function formatTodayTitle() {
   return `Today, ${date}`;
 }
 
-function renderProfileSummary() {
-  const topPriorities = getPriorityOrder(state.profile).slice(0, 2).join(" + ");
-  profileSummary.textContent = `${state.profile.duration} min · ${topPriorities}`;
+function renderProfileSummary(profile = state.profile) {
+  const topPriorities = getPriorityOrder(profile).slice(0, 2).join(" + ");
+  profileSummary.textContent = `${profile.duration} min · ${topPriorities}`;
 }
 
 function renderSettings() {
@@ -188,7 +188,7 @@ function durationSelectionValue() {
 }
 
 function selectedDurationFromForm(data) {
-  if (data.get("duration") !== "custom") return Number(data.get("duration"));
+  if (data.get("duration") !== "custom") return normalizeDuration(data.get("duration"));
   return normalizeDuration(data.get("customDuration"), 40);
 }
 
@@ -200,6 +200,24 @@ function normalizeDuration(value, fallback = defaultProfile.duration) {
 function renderCustomDuration() {
   const customSelected = document.querySelector("input[name='duration'][value='custom']")?.checked;
   customDurationRow.classList.toggle("is-visible", Boolean(customSelected));
+}
+
+function currentProfileFromControls() {
+  const form = document.querySelector("#settings-form");
+  if (!form) return state.profile;
+  const data = new FormData(form);
+  const priorityOrder = [...priorityList.querySelectorAll("[data-priority-muscle]")]
+    .map((item) => item.dataset.priorityMuscle);
+  return {
+    ...state.profile,
+    priorities: prioritiesFromOrder(priorityOrder),
+    priorityOrder,
+    duration: selectedDurationFromForm(data)
+  };
+}
+
+function renderProfileSummaryFromControls() {
+  renderProfileSummary(currentProfileFromControls());
 }
 
 function getPriorityOrder(profile = state.profile) {
@@ -231,7 +249,7 @@ function renderWorkout() {
       <div class="empty-state">
         <div class="mini-plate" aria-hidden="true"></div>
         <h3>No workout generated yet</h3>
-        <p>Your saved settings stay ready.<br />Tap Generate Workout when you<br />get to the gym.</p>
+        <p>Your saved settings stay ready.<br />Tap Generate Workout when<br />you get to the gym.</p>
       </div>
     `;
     return;
@@ -1493,6 +1511,9 @@ document.querySelector("#settings-form").addEventListener("submit", (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  if (event.target === customDurationInput) {
+    renderProfileSummaryFromControls();
+  }
   if (event.target === exerciseSearchInput) {
     exerciseSearchQuery = event.target.value.trim().toLowerCase();
     renderExercises();
@@ -1535,6 +1556,7 @@ document.addEventListener("keydown", (event) => {
 document.addEventListener("change", (event) => {
   if (event.target.matches("input[name='duration']")) {
     renderCustomDuration();
+    renderProfileSummaryFromControls();
   }
   if (event.target === exerciseStatusFilterInput) {
     exerciseStatusFilter = event.target.value;
@@ -1644,6 +1666,7 @@ function finishPriorityDrag(pointerId) {
   priorityDragOffsetY = 0;
   pendingPriorityDrag = null;
   updatePriorityRanks();
+  renderProfileSummaryFromControls();
 }
 
 document.addEventListener("click", (event) => {
@@ -1727,21 +1750,25 @@ document.addEventListener("click", (event) => {
   }
 });
 
+const HISTORY_DELETE_WIDTH = 82;
+
 document.addEventListener("pointerdown", (event) => {
   const row = event.target.closest("[data-history-row]");
   if (!row) return;
   row.dataset.startX = event.clientX;
   row.dataset.startY = event.clientY;
-  row.dataset.currentX = "0";
+  row.dataset.startOffset = row.classList.contains("is-open") ? String(-HISTORY_DELETE_WIDTH) : "0";
+  row.dataset.currentX = row.dataset.startOffset;
   row.dataset.swipeIntent = "pending";
   row.classList.add("is-swiping");
 });
 
 document.addEventListener("pointermove", (event) => {
-  const row = event.target.closest("[data-history-row]");
+  const row = document.querySelector(".swipe-row.is-swiping");
   if (!row?.classList.contains("is-swiping")) return;
   const startX = Number(row.dataset.startX);
   const startY = Number(row.dataset.startY);
+  const startOffset = Number(row.dataset.startOffset || 0);
   const rawDeltaX = event.clientX - startX;
   const rawDeltaY = event.clientY - startY;
   const horizontal = Math.abs(rawDeltaX);
@@ -1757,18 +1784,21 @@ document.addEventListener("pointermove", (event) => {
   }
 
   if (row.dataset.swipeIntent !== "horizontal") return;
-  const delta = Math.min(0, Math.max(-92, rawDeltaX));
+  const delta = Math.min(0, Math.max(-HISTORY_DELETE_WIDTH, startOffset + rawDeltaX));
   row.dataset.currentX = String(delta);
-  row.querySelector("[data-swipe-content]").style.transform = `translateX(${delta}px)`;
+  setHistorySwipePosition(row, delta);
 });
 
 document.addEventListener("pointerup", (event) => {
   const row = document.querySelector(".swipe-row.is-swiping");
   if (!row) return;
   const delta = Number(row.dataset.currentX || 0);
-  const open = row.dataset.swipeIntent === "horizontal" && delta < -68;
+  const wasOpen = row.dataset.startOffset === String(-HISTORY_DELETE_WIDTH);
+  const open = row.dataset.swipeIntent === "horizontal"
+    ? delta < -(HISTORY_DELETE_WIDTH / 2)
+    : wasOpen;
   row.classList.toggle("is-open", open);
-  row.querySelector("[data-swipe-content]").style.transform = open ? "translateX(-82px)" : "";
+  setHistorySwipePosition(row, open ? -HISTORY_DELETE_WIDTH : 0);
   resetHistorySwipe(row, true);
 });
 
@@ -1780,14 +1810,20 @@ document.addEventListener("pointercancel", () => {
 function resetHistorySwipe(row, keepOpenState = false) {
   if (!keepOpenState) {
     row.classList.remove("is-open");
-    const content = row.querySelector("[data-swipe-content]");
-    if (content) content.style.transform = "";
+    setHistorySwipePosition(row, 0);
   }
   row.classList.remove("is-swiping");
   delete row.dataset.startX;
   delete row.dataset.startY;
+  delete row.dataset.startOffset;
   delete row.dataset.currentX;
   delete row.dataset.swipeIntent;
+}
+
+function setHistorySwipePosition(row, delta) {
+  const content = row.querySelector("[data-swipe-content]");
+  if (!content) return;
+  content.style.transform = delta ? `translateX(${delta}px)` : "";
 }
 
 function updateCompletionButtons(exercise) {
