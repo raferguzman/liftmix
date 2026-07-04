@@ -16,6 +16,13 @@ let exerciseStatusFilter = "all";
 let exerciseSearchQuery = "";
 let editingCustomExerciseId = null;
 let selectedCustomExerciseId = null;
+let restTimer = null;
+let restTimerInterval = null;
+let restTimerDoneTimer = null;
+let restTimerHold = null;
+let suppressRestTimerClick = false;
+
+const REST_TIMER_HOLD_MS = 600;
 
 const title = document.querySelector("#screen-title");
 const pageResetButton = document.querySelector("#page-reset-button");
@@ -267,8 +274,8 @@ function renderWorkout() {
         <div class="exercise-meta">
           <span class="pill">${exercise.muscle}</span>
           <span class="pill">${formatRepTarget(exercise)}</span>
-          <span class="pill">${formatRestTime(exercise.rest)}</span>
         </div>
+        ${renderRestTimerButton(exercise)}
       </div>
       <button class="swap-button" data-swap="${exercise.id}" aria-label="Swap ${exercise.name}" title="Swap Exercise">
         <span class="swap-arrows" aria-hidden="true"><span>→</span><span>←</span></span>
@@ -400,6 +407,152 @@ function formatRestTime(seconds) {
   const minutes = Math.floor(seconds / 60);
   const remainder = seconds % 60;
   return remainder ? `${minutes}m ${remainder}s rest` : `${minutes}m rest`;
+}
+
+function renderRestTimerButton(exercise) {
+  const view = restTimerViewFor(exercise.id, exercise.rest);
+  return `
+    <div class="rest-timer-row">
+      <button
+        class="${view.className}"
+        data-rest-timer="${exercise.id}"
+        data-rest-seconds="${exercise.rest}"
+        type="button"
+        aria-label="${view.ariaLabel}"
+      >${view.label}</button>
+    </div>
+  `;
+}
+
+function restTimerViewFor(exerciseId, restSeconds) {
+  const baseClass = "pill rest-timer-pill";
+  if (!restTimer || restTimer.exerciseId !== exerciseId) {
+    return {
+      label: formatRestTime(restSeconds),
+      className: baseClass,
+      ariaLabel: `Start ${formatRestTime(restSeconds)}`
+    };
+  }
+
+  if (restTimer.status === "done") {
+    return {
+      label: "Rest done",
+      className: `${baseClass} is-done`,
+      ariaLabel: "Rest done"
+    };
+  }
+
+  const seconds = restTimerRemaining();
+  if (restTimer.status === "paused") {
+    return {
+      label: `Paused · ${formatCountdown(seconds)}`,
+      className: `${baseClass} is-paused`,
+      ariaLabel: `Resume rest timer, ${formatCountdown(seconds)} remaining`
+    };
+  }
+
+  return {
+    label: formatCountdown(seconds),
+    className: `${baseClass} is-running ${seconds <= 3 ? "is-warning" : ""}`,
+    ariaLabel: `Pause rest timer, ${formatCountdown(seconds)} remaining`
+  };
+}
+
+function formatCountdown(seconds) {
+  const remaining = Math.max(0, Math.ceil(Number(seconds) || 0));
+  const minutes = Math.floor(remaining / 60);
+  const remainder = String(remaining % 60).padStart(2, "0");
+  return `${minutes}:${remainder}`;
+}
+
+function restTimerRemaining() {
+  if (!restTimer) return 0;
+  if (restTimer.status === "paused" || restTimer.status === "done") return restTimer.remainingSeconds;
+  return Math.max(0, Math.ceil((restTimer.endsAt - Date.now()) / 1000));
+}
+
+function toggleRestTimer(exerciseId, restSeconds) {
+  if (!restSeconds) return;
+  if (!restTimer || restTimer.exerciseId !== exerciseId || restTimer.status === "done") {
+    startRestTimer(exerciseId, restSeconds);
+    return;
+  }
+  if (restTimer.status === "running") {
+    pauseRestTimer();
+    return;
+  }
+  resumeRestTimer();
+}
+
+function startRestTimer(exerciseId, restSeconds) {
+  clearRestTimer(false);
+  const seconds = Math.max(1, Number(restSeconds) || 0);
+  restTimer = {
+    exerciseId,
+    totalSeconds: seconds,
+    remainingSeconds: seconds,
+    endsAt: Date.now() + seconds * 1000,
+    status: "running"
+  };
+  startRestTimerInterval();
+  updateRestTimerButtons();
+}
+
+function pauseRestTimer() {
+  if (!restTimer) return;
+  restTimer.remainingSeconds = restTimerRemaining();
+  restTimer.status = "paused";
+  stopRestTimerInterval();
+  updateRestTimerButtons();
+}
+
+function resumeRestTimer() {
+  if (!restTimer) return;
+  restTimer.status = "running";
+  restTimer.endsAt = Date.now() + restTimer.remainingSeconds * 1000;
+  startRestTimerInterval();
+  updateRestTimerButtons();
+}
+
+function startRestTimerInterval() {
+  stopRestTimerInterval();
+  restTimerInterval = setInterval(tickRestTimer, 250);
+}
+
+function stopRestTimerInterval() {
+  if (restTimerInterval) clearInterval(restTimerInterval);
+  restTimerInterval = null;
+}
+
+function tickRestTimer() {
+  if (!restTimer || restTimer.status !== "running") return;
+  const remaining = restTimerRemaining();
+  restTimer.remainingSeconds = remaining;
+  updateRestTimerButtons();
+  if (remaining > 0) return;
+  restTimer.status = "done";
+  stopRestTimerInterval();
+  showCenterNotice("Rest done", "Time for the next set.");
+  clearTimeout(restTimerDoneTimer);
+  restTimerDoneTimer = setTimeout(() => clearRestTimer(), 1800);
+  updateRestTimerButtons();
+}
+
+function clearRestTimer(updateButtons = true) {
+  stopRestTimerInterval();
+  clearTimeout(restTimerDoneTimer);
+  restTimerDoneTimer = null;
+  restTimer = null;
+  if (updateButtons) updateRestTimerButtons();
+}
+
+function updateRestTimerButtons() {
+  document.querySelectorAll("[data-rest-timer]").forEach((button) => {
+    const view = restTimerViewFor(button.dataset.restTimer, Number(button.dataset.restSeconds));
+    button.className = view.className;
+    button.textContent = view.label;
+    button.setAttribute("aria-label", view.ariaLabel);
+  });
 }
 
 function renderExercises() {
@@ -552,6 +705,7 @@ function formatHistorySets(sets = [], logging = "weight") {
 }
 
 function generateWorkout() {
+  clearRestTimer(false);
   const profile = state.profile;
   const targetDuration = profile.duration;
   const timeBudget = workoutTimeBudget(targetDuration);
@@ -1141,6 +1295,7 @@ function swapExercise(mode) {
 
   const replacement = findReplacement(original);
   if (replacement) {
+    if (restTimer?.exerciseId === original.id) clearRestTimer(false);
     state.workout.exercises[index] = replacement;
     state.workout.swappedOutIds = [
       ...new Set([...(state.workout.swappedOutIds || []), original.id])
@@ -1157,7 +1312,7 @@ function swapExercise(mode) {
       state.excluded = state.excluded.filter((id) => id !== removedId);
       saveState();
       showToast(`${original.name} restored.`);
-    });
+    }, 3000);
   } else {
     showToast(replacement ? `Swapped to ${replacement.name}.` : "No safe swap available.");
   }
@@ -1418,6 +1573,7 @@ function resetCurrentPage() {
 }
 
 function cancelWorkoutWithoutSaving() {
+  clearRestTimer(false);
   state.workout = null;
   closeCancelWorkoutSheet();
   saveState();
@@ -1438,7 +1594,7 @@ function showCenterNotice(titleText, messageText) {
   }, 2200);
 }
 
-function showToast(message, actionLabel, action) {
+function showToast(message, actionLabel, action, duration = 3400) {
   toast.innerHTML = "";
   const panel = document.createElement("div");
   panel.className = "toast-panel";
@@ -1458,7 +1614,7 @@ function showToast(message, actionLabel, action) {
   }
   toast.appendChild(panel);
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => toast.classList.remove("is-visible"), 3600);
+  showToast.timer = setTimeout(() => toast.classList.remove("is-visible"), duration);
 }
 
 function randomIndex(length) {
@@ -1674,10 +1830,19 @@ document.addEventListener("click", (event) => {
   const swap = event.target.closest("[data-swap]");
   const complete = event.target.closest("[data-complete]");
   const setDone = event.target.closest("[data-set-done]");
+  const restButton = event.target.closest("[data-rest-timer]");
   const deleteHistory = event.target.closest("[data-delete-history]");
   const viewOlder = event.target.closest("[data-view-older]");
   const customMenu = event.target.closest("[data-custom-menu]");
 
+  if (restButton) {
+    if (suppressRestTimerClick) {
+      suppressRestTimerClick = false;
+    } else {
+      toggleRestTimer(restButton.dataset.restTimer, Number(restButton.dataset.restSeconds));
+    }
+    return;
+  }
   if (tab) setView(tab.dataset.view);
   if (customMenu) openExerciseActions(customMenu.dataset.customMenu);
   if (viewOlder) {
@@ -1715,6 +1880,7 @@ document.addEventListener("click", (event) => {
     });
   }
   if (event.target.id === "finish-button" && state.workout) {
+    clearRestTimer(false);
     const loggedExercises = state.workout.exercises.map((exercise) => {
       ensureExerciseLog(exercise);
       return {
@@ -1746,11 +1912,35 @@ document.addEventListener("click", (event) => {
     });
     state.workout = null;
     saveState();
-    showToast("Workout logged.");
+    showToast("Workout logged.", null, null, 2600);
   }
 });
 
 const HISTORY_DELETE_WIDTH = 82;
+
+document.addEventListener("pointerdown", (event) => {
+  const button = event.target.closest("[data-rest-timer]");
+  if (!button) return;
+  restTimerHold = window.setTimeout(() => {
+    suppressRestTimerClick = true;
+    if (restTimer?.exerciseId === button.dataset.restTimer) {
+      clearRestTimer();
+    }
+  }, REST_TIMER_HOLD_MS);
+});
+
+document.addEventListener("pointerup", clearRestTimerHold);
+document.addEventListener("pointercancel", clearRestTimerHold);
+document.addEventListener("pointermove", (event) => {
+  if (!restTimerHold) return;
+  const button = event.target.closest("[data-rest-timer]");
+  if (!button) clearRestTimerHold();
+});
+
+function clearRestTimerHold() {
+  if (restTimerHold) clearTimeout(restTimerHold);
+  restTimerHold = null;
+}
 
 document.addEventListener("pointerdown", (event) => {
   const row = event.target.closest("[data-history-row]");
