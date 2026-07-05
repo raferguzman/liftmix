@@ -1282,10 +1282,10 @@ select {
 
 .barbell-bar {
   position: absolute;
-  top: 7.5px;
+  top: 7px;
   left: 3px;
   width: 50px;
-  height: 1px;
+  height: 1.5px;
   border-radius: 999px;
   background: currentColor;
 }
@@ -1312,11 +1312,11 @@ select {
 }
 
 .barbell-plate.outer.left {
-  left: 7px;
+  left: 6px;
 }
 
 .barbell-plate.middle.left {
-  left: 10px;
+  left: 9px;
 }
 
 .barbell-plate.inner.left {
@@ -1328,11 +1328,11 @@ select {
 }
 
 .barbell-plate.middle.right {
-  right: 10px;
+  right: 9px;
 }
 
 .barbell-plate.outer.right {
-  right: 7px;
+  right: 6px;
 }
 
 .tab-controls {

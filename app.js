@@ -717,8 +717,7 @@ function generateWorkout() {
     return profile.equipment.includes(exercise.equipment) && !state.excluded.includes(exercise.id);
   });
   const recovery = muscleRecoveryStatus();
-  const recoveredPool = pool.filter((exercise) => (recovery[exercise.muscle] || 0) < 1);
-  const generationPool = recoveredPool.length ? recoveredPool : [...pool].sort((a, b) => {
+  const generationPool = [...pool].sort((a, b) => {
     return exerciseRecoveryBurden(a, recovery) - exerciseRecoveryBurden(b, recovery);
   });
 
@@ -774,6 +773,18 @@ function generateWorkout() {
     }
   }
 
+  estimatedMinutes = backfillSparseWorkout(
+    chosen,
+    estimatedMinutes,
+    minimumWorkoutMoves(targetDuration),
+    maxMoves,
+    timeBudget,
+    generationPool,
+    recentNames,
+    recovery,
+    profile
+  );
+
   estimatedMinutes = extendWorkoutTowardMinimum(
     chosen,
     estimatedMinutes,
@@ -824,12 +835,48 @@ function targetMuscleGroupCount(duration) {
   return 6;
 }
 
+function minimumWorkoutMoves(duration) {
+  if (duration <= 10) return 1;
+  if (duration <= 20) return 2;
+  if (duration <= 45) return 3;
+  if (duration <= 60) return 4;
+  return 5;
+}
+
+function backfillSparseWorkout(chosen, estimatedMinutes, minimumMoves, maxMoves, timeBudget, pool, recentNames, recovery, profile) {
+  if (chosen.length >= minimumMoves) return estimatedMinutes;
+  const fillOrder = rankAvailableMuscles(profile, pool, recovery);
+  let madeProgress = true;
+
+  while (chosen.length < minimumMoves && chosen.length < maxMoves && madeProgress) {
+    madeProgress = false;
+    for (const muscle of fillOrder) {
+      const prescribed = chooseExerciseForMuscle(
+        muscle,
+        pool,
+        chosen,
+        recentNames,
+        recovery,
+        timeBudget - estimatedMinutes,
+        null
+      );
+      if (!prescribed) continue;
+      chosen.push(prescribed);
+      estimatedMinutes += estimatedExerciseMinutes(prescribed);
+      madeProgress = true;
+      break;
+    }
+  }
+
+  return estimatedMinutes;
+}
+
 function rankAvailableMuscles(profile, pool, recovery) {
   return muscles
     .filter((muscle) => pool.some((exercise) => exercise.muscle === muscle))
     .sort((a, b) => {
-      const scoreA = (profile.priorities[a] || 0) * 10 - (recovery[a] || 0) * 30;
-      const scoreB = (profile.priorities[b] || 0) * 10 - (recovery[b] || 0) * 30;
+      const scoreA = (profile.priorities[a] || 0) * 10 - (recovery[a] || 0) * 16;
+      const scoreB = (profile.priorities[b] || 0) * 10 - (recovery[b] || 0) * 16;
       return scoreB - scoreA;
     });
 }
@@ -838,7 +885,7 @@ function buildMuscleAllocation(profile, pool, recovery, timeBudget) {
   const availableMuscles = rankAvailableMuscles(profile, pool, recovery);
   const weighted = availableMuscles.map((muscle) => ({
     muscle,
-    weight: Math.max(0.5, Math.pow(profile.priorities[muscle] || 1, 1.35) * (1 - (recovery[muscle] || 0) * 0.8))
+    weight: Math.max(0.6, Math.pow(profile.priorities[muscle] || 1, 1.35) * (1 - (recovery[muscle] || 0) * 0.55))
   }));
   const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0) || 1;
   const priorityOrder = getPriorityOrder(profile);
@@ -883,7 +930,7 @@ function weightedMuscleChoice(candidates, profile, recovery) {
   if (!candidates.length) return null;
   const weighted = candidates.map((muscle) => ({
     muscle,
-    weight: Math.max(1, Math.pow(profile.priorities[muscle] || 1, 2) * (1 - (recovery[muscle] || 0) * 0.75))
+    weight: Math.max(1, Math.pow(profile.priorities[muscle] || 1, 2) * (1 - (recovery[muscle] || 0) * 0.5))
   }));
   const total = weighted.reduce((sum, item) => sum + item.weight, 0);
   let roll = Math.random() * total;
@@ -1031,8 +1078,8 @@ function estimatedOrderedWorkoutMinutes(exercises) {
     const previous = exercises[index];
     if (previous.equipment !== exercise.equipment) return total;
     if (exercise.equipment === "Machines") return total;
-    if (exercise.equipment === "Cables") return total + 20;
-    return total + 15;
+    if (exercise.equipment === "Cables") return total + 10;
+    return total + 8;
   }, 0);
   return Math.max(0, baseMinutes - savedSeconds / 60);
 }
@@ -1073,29 +1120,48 @@ function exerciseFamily(exercise) {
 }
 
 function workoutTimeBudget(targetDuration) {
-  return Math.max(5, targetDuration);
+  if (targetDuration <= 10) return targetDuration;
+  if (targetDuration <= 30) return targetDuration * 0.88;
+  return targetDuration * 0.9;
 }
 
 function workoutMinimumMinutes(targetDuration) {
-  return workoutTimeBudget(targetDuration) * 0.92;
+  if (targetDuration <= 10) return workoutTimeBudget(targetDuration) * 0.8;
+  return workoutTimeBudget(targetDuration) * 0.82;
 }
 
 function estimatedExerciseMinutes(exercise) {
-  const workSecondsPerSet = exercise.logging === "duration"
-    ? 45
-    : exercise.style === "compound" ? 45 : 35;
-  const workSeconds = exercise.sets * workSecondsPerSet;
+  const workSeconds = exercise.sets * workSecondsPerSet(exercise);
   const restSeconds = Math.max(0, exercise.sets - 1) * exercise.rest;
-  const setupSeconds = exercise.style === "compound" ? 90 : 45;
-  const transitionSeconds = 45;
+  const setupSeconds = exerciseSetupSeconds(exercise);
+  const transitionSeconds = 60;
   return (workSeconds + restSeconds + setupSeconds + transitionSeconds) / 60;
 }
 
 function addedSetMinutes(exercise) {
-  const workSeconds = exercise.logging === "duration"
-    ? 45
-    : exercise.style === "compound" ? 45 : 35;
+  const workSeconds = workSecondsPerSet(exercise);
   return (workSeconds + exercise.rest) / 60;
+}
+
+function workSecondsPerSet(exercise) {
+  const liftSeconds = exercise.logging === "duration"
+    ? 50
+    : exercise.style === "compound" ? 50 : 42;
+  const loggingSeconds = 10;
+  return liftSeconds + loggingSeconds;
+}
+
+function exerciseSetupSeconds(exercise) {
+  const equipmentSetup = {
+    Barbell: 120,
+    Cables: 100,
+    Machines: 80,
+    Dumbbells: 70,
+    Kettlebells: 60,
+    Bodyweight: 35
+  };
+  const base = equipmentSetup[exercise.equipment] ?? 75;
+  return exercise.style === "compound" ? base + 20 : base;
 }
 
 function extendWorkoutTowardMinimum(exercises, currentMinutes, minimumMinutes, timeBudget, muscleAllocation = null) {
