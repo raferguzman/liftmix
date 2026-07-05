@@ -79,11 +79,8 @@
         </section>
 
         <section class="view" id="view-excluded" aria-label="Exercises">
-          <div class="section-header section-header-action">
-            <div>
-              <p>Choose which exercises can appear in generated workouts.</p>
-            </div>
-            <button class="add-exercise-button" id="add-exercise-button" aria-label="Add exercise" title="Add exercise"></button>
+          <div class="section-header">
+            <p>Choose which exercises can appear in generated workouts.</p>
           </div>
           <div class="exercise-toolbar">
             <label class="exercise-search">
@@ -235,6 +232,19 @@
           <button class="secondary-action" id="keep-custom-exercise-button">Keep Exercise</button>
           <button class="danger-action" id="confirm-delete-exercise-button">Delete Exercise</button>
         </div>
+      </section>
+    </div>
+
+    <div class="sheet-backdrop" id="exercise-page-actions-backdrop" hidden>
+      <section class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="exercise-page-actions-title">
+        <div class="sheet-grip" aria-hidden="true"></div>
+        <h2 id="exercise-page-actions-title">Exercises</h2>
+        <p>Manage the exercise list used by LiftMix.</p>
+        <div class="sheet-actions">
+          <button class="secondary-action" id="page-add-exercise-button">Add Exercise</button>
+          <button class="danger-action" id="page-reset-exercises-button">Reset Exercises</button>
+        </div>
+        <button class="text-action" id="close-exercise-page-actions-button">Cancel</button>
       </section>
     </div>
 

@@ -50,6 +50,7 @@ const exerciseActionsBackdrop = document.querySelector("#exercise-actions-backdr
 const exerciseActionsDetail = document.querySelector("#exercise-actions-detail");
 const deleteExerciseBackdrop = document.querySelector("#delete-exercise-backdrop");
 const deleteExerciseDetail = document.querySelector("#delete-exercise-detail");
+const exercisePageActionsBackdrop = document.querySelector("#exercise-page-actions-backdrop");
 const pageResetBackdrop = document.querySelector("#page-reset-backdrop");
 const pageResetTitle = document.querySelector("#page-reset-title");
 const pageResetMessage = document.querySelector("#page-reset-message");
@@ -1578,6 +1579,14 @@ function closeDeleteExerciseConfirmation() {
   deleteExerciseBackdrop.hidden = true;
 }
 
+function openExercisePageActions() {
+  exercisePageActionsBackdrop.hidden = false;
+}
+
+function closeExercisePageActions() {
+  exercisePageActionsBackdrop.hidden = true;
+}
+
 function deleteCustomExercise() {
   const exercise = state.customExercises.find((item) => item.id === selectedCustomExerciseId);
   if (!exercise) return;
@@ -1708,7 +1717,6 @@ function randomIndex(length) {
 document.querySelector("#generate-button").addEventListener("click", generateWorkout);
 document.querySelector("#keep-workout-button").addEventListener("click", closeCancelWorkoutSheet);
 document.querySelector("#confirm-cancel-workout-button").addEventListener("click", cancelWorkoutWithoutSaving);
-document.querySelector("#add-exercise-button").addEventListener("click", () => openExerciseForm());
 document.querySelector("#cancel-exercise-form-button").addEventListener("click", closeExerciseForm);
 document.querySelector("#close-exercise-actions-button").addEventListener("click", closeExerciseActions);
 document.querySelector("#edit-custom-exercise-button").addEventListener("click", () => {
@@ -1719,9 +1727,22 @@ document.querySelector("#edit-custom-exercise-button").addEventListener("click",
 document.querySelector("#delete-custom-exercise-button").addEventListener("click", openDeleteExerciseConfirmation);
 document.querySelector("#keep-custom-exercise-button").addEventListener("click", closeDeleteExerciseConfirmation);
 document.querySelector("#confirm-delete-exercise-button").addEventListener("click", deleteCustomExercise);
+document.querySelector("#close-exercise-page-actions-button").addEventListener("click", closeExercisePageActions);
+document.querySelector("#page-add-exercise-button").addEventListener("click", () => {
+  closeExercisePageActions();
+  openExerciseForm();
+});
+document.querySelector("#page-reset-exercises-button").addEventListener("click", () => {
+  closeExercisePageActions();
+  openPageResetSheet();
+});
 document.querySelector("#page-reset-button").addEventListener("click", () => {
   if (activeView === "today" && state.workout) {
     openCancelWorkoutSheet();
+    return;
+  }
+  if (activeView === "excluded") {
+    openExercisePageActions();
     return;
   }
   openPageResetSheet();
