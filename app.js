@@ -22,7 +22,7 @@ let restTimerDoneTimer = null;
 let restTimerHold = null;
 let suppressRestTimerClick = false;
 
-const REST_TIMER_HOLD_MS = 600;
+const REST_TIMER_HOLD_MS = 500;
 
 const title = document.querySelector("#screen-title");
 const pageResetButton = document.querySelector("#page-reset-button");
@@ -434,6 +434,14 @@ function restTimerViewFor(exerciseId, restSeconds) {
     };
   }
 
+  if (restTimer.status === "canceled") {
+    return {
+      label: "Canceled",
+      className: `${baseClass} is-canceled`,
+      ariaLabel: "Rest timer canceled"
+    };
+  }
+
   if (restTimer.status === "done") {
     return {
       label: "Rest done",
@@ -467,7 +475,7 @@ function formatCountdown(seconds) {
 
 function restTimerRemaining() {
   if (!restTimer) return 0;
-  if (restTimer.status === "paused" || restTimer.status === "done") return restTimer.remainingSeconds;
+  if (["paused", "done", "canceled"].includes(restTimer.status)) return restTimer.remainingSeconds;
   return Math.max(0, Math.ceil((restTimer.endsAt - Date.now()) / 1000));
 }
 
@@ -544,6 +552,16 @@ function clearRestTimer(updateButtons = true) {
   restTimerDoneTimer = null;
   restTimer = null;
   if (updateButtons) updateRestTimerButtons();
+}
+
+function cancelRestTimer() {
+  if (!restTimer) return;
+  stopRestTimerInterval();
+  restTimer.remainingSeconds = 0;
+  restTimer.status = "canceled";
+  clearTimeout(restTimerDoneTimer);
+  restTimerDoneTimer = setTimeout(() => clearRestTimer(), 900);
+  updateRestTimerButtons();
 }
 
 function updateRestTimerButtons() {
@@ -1990,7 +2008,7 @@ document.addEventListener("pointerdown", (event) => {
   restTimerHold = window.setTimeout(() => {
     suppressRestTimerClick = true;
     if (restTimer?.exerciseId === button.dataset.restTimer) {
-      clearRestTimer();
+      cancelRestTimer();
     }
   }, REST_TIMER_HOLD_MS);
 });

@@ -507,16 +507,21 @@ p {
 }
 
 .rest-timer-row {
-  display: flex;
+  display: block;
   margin-top: 7px;
 }
 
 .rest-timer-pill {
-  min-height: 30px;
+  width: 100%;
+  min-height: 38px;
+  display: grid;
+  place-items: center;
   padding: 0 12px;
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+  font-size: 12px;
+  letter-spacing: 0;
 }
 
 .rest-timer-pill.is-running {
@@ -525,13 +530,18 @@ p {
 }
 
 .rest-timer-pill.is-paused {
-  background: #d9d1c3;
-  color: #403c36;
+  background: #d7a934;
+  color: #231f16;
 }
 
 .rest-timer-pill.is-warning {
   background: #d7a934;
   color: #231f16;
+}
+
+.rest-timer-pill.is-canceled {
+  background: #efe8dc;
+  color: #58524b;
 }
 
 .rest-timer-pill.is-done {
