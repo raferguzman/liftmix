@@ -1749,6 +1749,9 @@ document.querySelector("#page-reset-button").addEventListener("click", () => {
 });
 document.querySelector("#keep-page-settings-button").addEventListener("click", closePageResetSheet);
 document.querySelector("#confirm-page-reset-button").addEventListener("click", resetCurrentPage);
+exercisePageActionsBackdrop.addEventListener("click", (event) => {
+  if (event.target === exercisePageActionsBackdrop) closeExercisePageActions();
+});
 exerciseForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const wasEditing = Boolean(editingCustomExerciseId);

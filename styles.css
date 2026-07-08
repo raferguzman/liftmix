@@ -1495,9 +1495,42 @@ select {
   margin-top: 16px;
 }
 
+.action-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.action-list-button {
+  min-height: 48px;
+  width: 100%;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #e4dbcf;
+  color: var(--ink);
+  font-weight: 600;
+  text-align: center;
+}
+
+.action-list-button.is-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.action-list-button.is-danger {
+  background: #f0dedb;
+  color: var(--danger);
+}
+
+.action-list-button.is-cancel {
+  background: transparent;
+  color: var(--muted);
+}
+
 #cancel-workout-backdrop .sheet-actions button {
-  min-height: 58px;
-  padding: 0 14px;
+  min-height: 68px;
+  padding: 11px 14px 12px;
+  line-height: 1.18;
   text-align: center;
 }
 
