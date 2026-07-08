@@ -1518,13 +1518,13 @@ select {
 }
 
 .action-list-button.is-danger {
-  background: #f0dedb;
-  color: var(--danger);
+  background: var(--danger);
+  color: #fff;
 }
 
 .action-list-button.is-cancel {
-  background: transparent;
-  color: var(--muted);
+  background: #e4dbcf;
+  color: var(--ink);
 }
 
 #cancel-workout-backdrop .sheet-actions button {
