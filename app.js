@@ -1866,13 +1866,15 @@ function beginPriorityDrag(item, event) {
   priorityPlaceholder = document.createElement("div");
   priorityPlaceholder.className = "priority-placeholder";
   priorityPlaceholder.style.height = `${box.height}px`;
-  priorityList.insertBefore(priorityPlaceholder, item.nextSibling);
   item.classList.add("is-dragging");
   item.style.position = "fixed";
   item.style.left = `${box.left}px`;
   item.style.top = `${box.top}px`;
   item.style.width = `${box.width}px`;
   item.style.zIndex = "30";
+  animatePriorityShift(() => {
+    priorityList.insertBefore(priorityPlaceholder, item.nextSibling);
+  });
   item.setPointerCapture?.(event.pointerId);
   pendingPriorityDrag = null;
 }
@@ -1900,7 +1902,12 @@ priorityList.addEventListener("pointermove", (event) => {
 
   const targetBox = target.getBoundingClientRect();
   const insertAfter = event.clientY > targetBox.top + targetBox.height / 2;
-  priorityList.insertBefore(priorityPlaceholder, insertAfter ? target.nextSibling : target);
+  const referenceNode = insertAfter ? target.nextSibling : target;
+  if (referenceNode === priorityPlaceholder || priorityPlaceholder.nextSibling === referenceNode) return;
+
+  animatePriorityShift(() => {
+    priorityList.insertBefore(priorityPlaceholder, referenceNode);
+  });
   updatePriorityRanks();
 });
 
@@ -1918,19 +1925,50 @@ priorityList.addEventListener("pointercancel", (event) => {
 
 function finishPriorityDrag(pointerId) {
   const item = draggedPriorityItem;
-  if (priorityPlaceholder) {
-    priorityList.insertBefore(item, priorityPlaceholder);
-    priorityPlaceholder.remove();
-  }
   item.releasePointerCapture?.(pointerId);
-  item.classList.remove("is-dragging");
-  item.removeAttribute("style");
+  if (priorityPlaceholder) {
+    animatePriorityShift(() => {
+      priorityList.insertBefore(item, priorityPlaceholder);
+      item.classList.remove("is-dragging");
+      item.removeAttribute("style");
+      priorityPlaceholder.remove();
+    });
+  } else {
+    item.classList.remove("is-dragging");
+    item.removeAttribute("style");
+  }
   draggedPriorityItem = null;
   priorityPlaceholder = null;
   priorityDragOffsetY = 0;
   pendingPriorityDrag = null;
   updatePriorityRanks();
   renderProfileSummaryFromControls();
+}
+
+function animatePriorityShift(mutator) {
+  const movers = [...priorityList.querySelectorAll("[data-priority-muscle]")]
+    .filter((item) => item !== draggedPriorityItem);
+  const before = new Map(movers.map((item) => [item, item.getBoundingClientRect()]));
+
+  mutator();
+
+  movers.forEach((item) => {
+    const previous = before.get(item);
+    if (!previous) return;
+    const next = item.getBoundingClientRect();
+    const deltaY = previous.top - next.top;
+    if (Math.abs(deltaY) < 1) return;
+    item.animate(
+      [
+        { transform: `translateY(${deltaY}px)` },
+        { transform: "translateY(0)" }
+      ],
+      {
+        duration: 180,
+        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)"
+      }
+    );
+  });
 }
 
 document.addEventListener("click", (event) => {

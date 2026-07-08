@@ -789,6 +789,7 @@ legend {
     box-shadow 160ms ease,
     border-color 160ms ease,
     background 160ms ease;
+  will-change: transform;
   cursor: grab;
 }
 
