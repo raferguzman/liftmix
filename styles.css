@@ -305,7 +305,7 @@ p {
 
 .segmented input:checked + span {
   color: #fff;
-  background: var(--accent-strong);
+  background: var(--accent);
 }
 
 .segmented label {
@@ -395,13 +395,13 @@ p {
   min-height: 68px;
   padding: 10px;
   border-radius: 8px;
-  background: #242729;
+  background: var(--accent);
   color: #fff;
 }
 
 .summary-tile span {
   display: block;
-  color: #b9c7c5;
+  color: rgba(255, 255, 255, 0.76);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -806,7 +806,7 @@ legend {
   border: 1px dashed rgba(95, 111, 59, 0.46);
   border-radius: 8px;
   background: rgba(95, 111, 59, 0.10);
-  transition: height 160ms ease;
+  transition: height 240ms ease;
 }
 
 .priority-rank {
@@ -815,7 +815,7 @@ legend {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: #242729;
+  background: var(--accent);
   color: #fff;
   font-size: 12px;
   font-weight: 700;

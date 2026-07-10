@@ -1964,7 +1964,7 @@ function animatePriorityShift(mutator) {
         { transform: "translateY(0)" }
       ],
       {
-        duration: 180,
+        duration: 280,
         easing: "cubic-bezier(0.2, 0.8, 0.2, 1)"
       }
     );
