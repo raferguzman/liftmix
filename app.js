@@ -51,6 +51,7 @@ const exerciseActionsDetail = document.querySelector("#exercise-actions-detail")
 const deleteExerciseBackdrop = document.querySelector("#delete-exercise-backdrop");
 const deleteExerciseDetail = document.querySelector("#delete-exercise-detail");
 const exercisePageActionsBackdrop = document.querySelector("#exercise-page-actions-backdrop");
+const historyPageActionsBackdrop = document.querySelector("#history-page-actions-backdrop");
 const pageResetBackdrop = document.querySelector("#page-reset-backdrop");
 const pageResetTitle = document.querySelector("#page-reset-title");
 const pageResetMessage = document.querySelector("#page-reset-message");
@@ -1587,6 +1588,14 @@ function closeExercisePageActions() {
   exercisePageActionsBackdrop.hidden = true;
 }
 
+function openHistoryPageActions() {
+  historyPageActionsBackdrop.hidden = false;
+}
+
+function closeHistoryPageActions() {
+  historyPageActionsBackdrop.hidden = true;
+}
+
 function deleteCustomExercise() {
   const exercise = state.customExercises.find((item) => item.id === selectedCustomExerciseId);
   if (!exercise) return;
@@ -1665,6 +1674,92 @@ function resetCurrentPage() {
   showCenterNotice("History cleared", "All logged workouts were deleted.");
 }
 
+function exportHistoryCsv() {
+  if (!state.history.length) {
+    closeHistoryPageActions();
+    showCenterNotice("No history yet", "Log a workout before exporting.");
+    return;
+  }
+
+  const csv = buildHistoryCsv();
+  const date = new Date().toISOString().slice(0, 10);
+  const filename = `liftmix-history-${date}.csv`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const file = new File([blob], filename, { type: "text/csv" });
+
+  closeHistoryPageActions();
+
+  if (navigator.canShare?.({ files: [file] })) {
+    navigator.share({ files: [file], title: "LiftMix history" })
+      .then(() => showCenterNotice("History exported", "Your CSV is ready to share."))
+      .catch(() => {});
+    return;
+  }
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showCenterNotice("History exported", "Your CSV file is ready.");
+}
+
+function buildHistoryCsv() {
+  const headers = [
+    "Workout Date",
+    "Timestamp",
+    "Focus",
+    "Exercise",
+    "Muscle Group",
+    "Secondary Muscles",
+    "Logging Type",
+    "Set",
+    "Weight",
+    "Reps",
+    "Duration Seconds",
+    "Assistance",
+    "Set Done",
+    "Exercise Completed",
+    "Note"
+  ];
+  const rows = state.history.flatMap((workout) => {
+    const exercises = workout.exercises?.length
+      ? workout.exercises
+      : workout.exerciseNames.map((name, index) => ({ id: workout.exerciseIds[index], name, sets: [] }));
+
+    return exercises.flatMap((exercise) => {
+      const sets = exercise.sets?.length ? exercise.sets : [{}];
+      return sets.map((set, index) => [
+        workout.date || "",
+        workout.timestamp ? new Date(workout.timestamp).toISOString() : "",
+        workout.focus || "",
+        exercise.name || "",
+        historyExerciseMuscle(exercise),
+        (exercise.secondaryMuscles || []).join("; "),
+        exercise.logging || "weight",
+        exercise.sets?.length ? index + 1 : "",
+        set.weight ?? "",
+        set.reps ?? "",
+        set.duration ?? "",
+        set.assistance ?? "",
+        set.done ? "Yes" : "No",
+        exercise.completed ? "Yes" : "No",
+        exercise.noteSnapshot || ""
+      ]);
+    });
+  });
+
+  return [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+}
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
 function cancelWorkoutWithoutSaving() {
   clearRestTimer(false);
   state.workout = null;
@@ -1736,6 +1831,12 @@ document.querySelector("#page-reset-exercises-button").addEventListener("click",
   closeExercisePageActions();
   openPageResetSheet();
 });
+document.querySelector("#page-export-history-button").addEventListener("click", exportHistoryCsv);
+document.querySelector("#page-clear-history-button").addEventListener("click", () => {
+  closeHistoryPageActions();
+  openPageResetSheet();
+});
+document.querySelector("#close-history-page-actions-button").addEventListener("click", closeHistoryPageActions);
 document.querySelector("#page-reset-button").addEventListener("click", () => {
   if (activeView === "today" && state.workout) {
     openCancelWorkoutSheet();
@@ -1745,12 +1846,19 @@ document.querySelector("#page-reset-button").addEventListener("click", () => {
     openExercisePageActions();
     return;
   }
+  if (activeView === "history") {
+    openHistoryPageActions();
+    return;
+  }
   openPageResetSheet();
 });
 document.querySelector("#keep-page-settings-button").addEventListener("click", closePageResetSheet);
 document.querySelector("#confirm-page-reset-button").addEventListener("click", resetCurrentPage);
 exercisePageActionsBackdrop.addEventListener("click", (event) => {
   if (event.target === exercisePageActionsBackdrop) closeExercisePageActions();
+});
+historyPageActionsBackdrop.addEventListener("click", (event) => {
+  if (event.target === historyPageActionsBackdrop) closeHistoryPageActions();
 });
 exerciseForm.addEventListener("submit", (event) => {
   event.preventDefault();
