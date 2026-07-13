@@ -1,6 +1,8 @@
 const muscles = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core"];
 const equipmentOptions = ["Dumbbells", "Barbell", "Cables", "Machines", "Bodyweight", "Kettlebells"];
 const RECOVERY_WINDOW_MS = 48 * 60 * 60 * 1000;
+const BALANCE_HISTORY_LIMIT = 10;
+const SECONDARY_BALANCE_CREDIT = 0.35;
 const defaultProfile = {
   priorities: { Arms: 6, Back: 5, Chest: 4, Core: 3, Legs: 2, Shoulders: 1 },
   priorityOrder: ["Arms", "Back", "Chest", "Core", "Legs", "Shoulders"],
@@ -742,8 +744,9 @@ function generateWorkout() {
   });
 
   const recentNames = new Set(state.history.slice(0, 3).flatMap((item) => item.exerciseIds));
-  const muscleAllocation = buildMuscleAllocation(profile, generationPool, recovery, timeBudget);
-  const musclePlan = buildMusclePlan(profile, generationPool, recovery, maxMoves);
+  const muscleBalance = muscleBalanceStatus(profile);
+  const muscleAllocation = buildMuscleAllocation(profile, generationPool, recovery, timeBudget, muscleBalance);
+  const musclePlan = buildMusclePlan(profile, generationPool, recovery, maxMoves, muscleBalance);
   const chosen = [];
   let estimatedMinutes = 0;
 
@@ -764,7 +767,7 @@ function generateWorkout() {
     }
   });
 
-  const fillOrder = [...musclePlan, ...rankAvailableMuscles(profile, generationPool, recovery)]
+  const fillOrder = [...musclePlan, ...rankAvailableMuscles(profile, generationPool, recovery, muscleBalance)]
     .filter((muscle, index, list) => list.indexOf(muscle) === index);
 
   let madeProgress = true;
@@ -802,7 +805,8 @@ function generateWorkout() {
     generationPool,
     recentNames,
     recovery,
-    profile
+    profile,
+    muscleBalance
   );
 
   estimatedMinutes = extendWorkoutTowardMinimum(
@@ -833,15 +837,15 @@ function generateWorkout() {
   saveState();
 }
 
-function buildMusclePlan(profile, pool, recovery, maxMoves) {
-  const ranked = rankAvailableMuscles(profile, pool, recovery);
+function buildMusclePlan(profile, pool, recovery, maxMoves, balance = muscleBalanceStatus(profile)) {
+  const ranked = rankAvailableMuscles(profile, pool, recovery, balance);
   const targetGroups = Math.min(ranked.length, maxMoves, targetMuscleGroupCount(profile.duration));
   if (targetGroups <= 1) return ranked.slice(0, targetGroups);
 
   const prioritySlots = Math.max(1, targetGroups - 1);
   const plan = ranked.slice(0, prioritySlots);
   const rotationCandidates = ranked.slice(prioritySlots);
-  const rotatingMuscle = weightedMuscleChoice(rotationCandidates, profile, recovery);
+  const rotatingMuscle = weightedMuscleChoice(rotationCandidates, profile, recovery, balance);
   if (rotatingMuscle) plan.push(rotatingMuscle);
   return plan;
 }
@@ -863,9 +867,9 @@ function minimumWorkoutMoves(duration) {
   return 5;
 }
 
-function backfillSparseWorkout(chosen, estimatedMinutes, minimumMoves, maxMoves, timeBudget, pool, recentNames, recovery, profile) {
+function backfillSparseWorkout(chosen, estimatedMinutes, minimumMoves, maxMoves, timeBudget, pool, recentNames, recovery, profile, balance = muscleBalanceStatus(profile)) {
   if (chosen.length >= minimumMoves) return estimatedMinutes;
-  const fillOrder = rankAvailableMuscles(profile, pool, recovery);
+  const fillOrder = rankAvailableMuscles(profile, pool, recovery, balance);
   let madeProgress = true;
 
   while (chosen.length < minimumMoves && chosen.length < maxMoves && madeProgress) {
@@ -891,21 +895,21 @@ function backfillSparseWorkout(chosen, estimatedMinutes, minimumMoves, maxMoves,
   return estimatedMinutes;
 }
 
-function rankAvailableMuscles(profile, pool, recovery) {
+function rankAvailableMuscles(profile, pool, recovery, balance = muscleBalanceStatus(profile)) {
   return muscles
     .filter((muscle) => pool.some((exercise) => exercise.muscle === muscle))
     .sort((a, b) => {
-      const scoreA = (profile.priorities[a] || 0) * 10 - (recovery[a] || 0) * 16;
-      const scoreB = (profile.priorities[b] || 0) * 10 - (recovery[b] || 0) * 16;
+      const scoreA = muscleGenerationWeight(profile, a, balance, recovery) * 10 - (recovery[a] || 0) * 16;
+      const scoreB = muscleGenerationWeight(profile, b, balance, recovery) * 10 - (recovery[b] || 0) * 16;
       return scoreB - scoreA;
     });
 }
 
-function buildMuscleAllocation(profile, pool, recovery, timeBudget) {
-  const availableMuscles = rankAvailableMuscles(profile, pool, recovery);
+function buildMuscleAllocation(profile, pool, recovery, timeBudget, balance = muscleBalanceStatus(profile)) {
+  const availableMuscles = rankAvailableMuscles(profile, pool, recovery, balance);
   const weighted = availableMuscles.map((muscle) => ({
     muscle,
-    weight: Math.max(0.6, Math.pow(profile.priorities[muscle] || 1, 1.35) * (1 - (recovery[muscle] || 0) * 0.55))
+    weight: Math.max(0.6, muscleGenerationWeight(profile, muscle, balance, recovery))
   }));
   const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0) || 1;
   const priorityOrder = getPriorityOrder(profile);
@@ -935,6 +939,98 @@ function buildMuscleAllocation(profile, pool, recovery, timeBudget) {
   return allocation;
 }
 
+function muscleBalanceStatus(profile = state.profile) {
+  const targetShares = muscleTargetShares(profile);
+  const actual = Object.fromEntries(muscles.map((muscle) => [muscle, 0]));
+  const recent = state.history.slice(0, BALANCE_HISTORY_LIMIT);
+
+  recent.forEach((workout, workoutIndex) => {
+    const workoutWeight = Math.pow(0.88, workoutIndex);
+    const exercises = workout.exercises?.length
+      ? workout.exercises
+      : (workout.exerciseIds || []).map((id, index) => {
+          const definition = getExerciseLibrary().find((exercise) => exercise.id === id);
+          return {
+            id,
+            name: workout.exerciseNames?.[index] || definition?.name || id,
+            muscle: definition?.muscle,
+            secondaryMuscles: secondaryMusclesForExercise(definition)
+          };
+        });
+
+    exercises.forEach((exercise) => {
+      const completed = exercise.completed
+        || exercise.sets?.some((set) => set.done)
+        || !exercise.sets;
+      if (!completed) return;
+
+      const definition = getExerciseLibrary().find((item) => item.id === exercise.id);
+      const primaryMuscle = exercise.muscle || definition?.muscle;
+      if (!primaryMuscle) return;
+
+      const setCount = Math.max(1, exercise.sets?.length || 1);
+      actual[primaryMuscle] += setCount * workoutWeight;
+
+      const secondaryMuscles = exercise.secondaryMuscles
+        || secondaryMusclesForExercise(definition || exercise);
+      secondaryMuscles.forEach((muscle) => {
+        actual[muscle] += setCount * SECONDARY_BALANCE_CREDIT * workoutWeight;
+      });
+    });
+  });
+
+  const total = Object.values(actual).reduce((sum, value) => sum + value, 0);
+  const confidence = Math.min(1, recent.length / 6);
+  const balance = {};
+
+  muscles.forEach((muscle) => {
+    const target = targetShares[muscle] || 0;
+    const actualShare = total ? actual[muscle] / total : target;
+    const gap = target - actualShare;
+    const correction = clamp(gap * 2.4 * confidence, -0.35, 0.7);
+    const absenceBoost = total && actual[muscle] === 0
+      ? Math.min(0.2, target * 1.5 * confidence)
+      : 0;
+    balance[muscle] = {
+      target,
+      actual: actualShare,
+      multiplier: Math.max(0.65, 1 + correction + absenceBoost)
+    };
+  });
+
+  return balance;
+}
+
+function muscleTargetShares(profile = state.profile) {
+  const priorityOrder = getPriorityOrder(profile);
+  const weighted = priorityOrder.map((muscle, index) => ({
+    muscle,
+    weight: priorityTargetWeight(index)
+  }));
+  const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0) || 1;
+  return weighted.reduce((shares, item) => {
+    shares[item.muscle] = item.weight / totalWeight;
+    return shares;
+  }, {});
+}
+
+function priorityTargetWeight(index) {
+  return Math.max(2.5, 6 - index * 0.7);
+}
+
+function muscleGenerationWeight(profile, muscle, balance = muscleBalanceStatus(profile), recovery = {}) {
+  const priorityOrder = getPriorityOrder(profile);
+  const rank = priorityOrder.indexOf(muscle);
+  const targetWeight = priorityTargetWeight(rank < 0 ? muscles.length - 1 : rank);
+  const balanceMultiplier = balance[muscle]?.multiplier ?? 1;
+  const recoveryMultiplier = 1 - (recovery[muscle] || 0) * 0.55;
+  return targetWeight * balanceMultiplier * recoveryMultiplier;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function muscleAllocationNeed(muscle, chosen, allocation) {
   const target = allocation[muscle]?.target || 0;
   return target - muscleMinutes(chosen, muscle);
@@ -946,11 +1042,11 @@ function muscleMinutes(exercises, muscle) {
     .reduce((total, exercise) => total + estimatedExerciseMinutes(exercise), 0);
 }
 
-function weightedMuscleChoice(candidates, profile, recovery) {
+function weightedMuscleChoice(candidates, profile, recovery, balance = muscleBalanceStatus(profile)) {
   if (!candidates.length) return null;
   const weighted = candidates.map((muscle) => ({
     muscle,
-    weight: Math.max(1, Math.pow(profile.priorities[muscle] || 1, 2) * (1 - (recovery[muscle] || 0) * 0.5))
+    weight: Math.max(1, Math.pow(muscleGenerationWeight(profile, muscle, balance, recovery), 1.5))
   }));
   const total = weighted.reduce((sum, item) => sum + item.weight, 0);
   let roll = Math.random() * total;
@@ -1187,7 +1283,6 @@ function exerciseSetupSeconds(exercise) {
 function extendWorkoutTowardMinimum(exercises, currentMinutes, minimumMinutes, timeBudget, muscleAllocation = null) {
   let estimatedMinutes = currentMinutes;
   const priorityOrder = getPriorityOrder(state.profile);
-  const lowPriorityMuscles = new Set(priorityOrder.slice(-2));
 
   while (estimatedMinutes < minimumMinutes) {
     const candidates = exercises
@@ -1209,11 +1304,12 @@ function extendWorkoutTowardMinimum(exercises, currentMinutes, minimumMinutes, t
         return muscleMinutes(exercises, exercise.muscle) + addedMinutes <= allocation.max;
       });
 
-    const priorityCandidates = candidates.filter(({ exercise }) => {
-      return !lowPriorityMuscles.has(exercise.muscle);
-    });
-    const sortedCandidates = (priorityCandidates.length ? priorityCandidates : candidates)
+    const sortedCandidates = candidates
       .sort((a, b) => {
+        const needA = muscleAllocationNeed(a.exercise.muscle, exercises, muscleAllocation || {});
+        const needB = muscleAllocationNeed(b.exercise.muscle, exercises, muscleAllocation || {});
+        if (needA !== needB) return needB - needA;
+
         const priorityA = priorityOrder.indexOf(a.exercise.muscle);
         const priorityB = priorityOrder.indexOf(b.exercise.muscle);
         if (priorityA !== priorityB) return priorityA - priorityB;
@@ -1691,7 +1787,7 @@ function exportHistoryCsv() {
 
   if (navigator.canShare?.({ files: [file] })) {
     navigator.share({ files: [file], title: "LiftMix history" })
-      .then(() => showCenterNotice("History exported", "Your CSV is ready to share."))
+      .then(() => showCenterNotice("History exported", "Your CSV is ready to share.", "success"))
       .catch(() => {});
     return;
   }
@@ -1704,7 +1800,7 @@ function exportHistoryCsv() {
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showCenterNotice("History exported", "Your CSV file is ready.");
+  showCenterNotice("History exported", "Your CSV file is ready.", "success");
 }
 
 function buildHistoryCsv() {
@@ -1768,9 +1864,10 @@ function cancelWorkoutWithoutSaving() {
   showCenterNotice("Workout canceled", "Nothing was saved to History.");
 }
 
-function showCenterNotice(titleText, messageText) {
+function showCenterNotice(titleText, messageText, tone = "danger") {
   centerNoticeTitle.textContent = titleText;
   centerNoticeMessage.textContent = messageText;
+  centerNotice.classList.toggle("is-success", tone === "success");
   centerNotice.hidden = false;
   requestAnimationFrame(() => centerNotice.classList.add("is-visible"));
   clearTimeout(showCenterNotice.timer);
@@ -1778,6 +1875,7 @@ function showCenterNotice(titleText, messageText) {
     centerNotice.classList.remove("is-visible");
     setTimeout(() => {
       centerNotice.hidden = true;
+      centerNotice.classList.remove("is-success");
     }, 180);
   }, 2200);
 }

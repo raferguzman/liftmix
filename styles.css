@@ -1651,6 +1651,28 @@ select {
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
+.center-notice.is-success .center-notice-icon {
+  border-color: var(--accent);
+}
+
+.center-notice.is-success .center-notice-icon::before {
+  top: 52%;
+  left: 47%;
+  width: 13px;
+  height: 4px;
+  background: var(--accent);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.center-notice.is-success .center-notice-icon::after {
+  top: 48%;
+  left: 55%;
+  width: 24px;
+  height: 4px;
+  background: var(--accent);
+  transform: translate(-50%, -50%) rotate(-48deg);
+}
+
 .center-notice-panel strong {
   margin-bottom: 6px;
   font-size: 19px;
