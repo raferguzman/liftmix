@@ -767,14 +767,16 @@ function generateWorkout() {
     }
   });
 
-  const fillOrder = [...musclePlan, ...rankAvailableMuscles(profile, generationPool, recovery, muscleBalance)]
+  const fillOrder = [...musclePlan, ...rankDeficitMuscles(profile, generationPool, recovery, muscleBalance)]
     .filter((muscle, index, list) => list.indexOf(muscle) === index);
 
   let madeProgress = true;
   while (chosen.length < maxMoves && estimatedMinutes < minimumMinutes && madeProgress) {
     madeProgress = false;
     const rankedFillOrder = [...fillOrder].sort((a, b) => {
-      return muscleAllocationNeed(b, chosen, muscleAllocation) - muscleAllocationNeed(a, chosen, muscleAllocation);
+      const needA = remainingMuscleNeed(a, chosen, muscleAllocation, muscleBalance);
+      const needB = remainingMuscleNeed(b, chosen, muscleAllocation, muscleBalance);
+      return needB - needA;
     });
 
     for (const muscle of rankedFillOrder) {
@@ -838,15 +840,19 @@ function generateWorkout() {
 }
 
 function buildMusclePlan(profile, pool, recovery, maxMoves, balance = muscleBalanceStatus(profile)) {
-  const ranked = rankAvailableMuscles(profile, pool, recovery, balance);
+  const ranked = rankDeficitMuscles(profile, pool, recovery, balance);
   const targetGroups = Math.min(ranked.length, maxMoves, targetMuscleGroupCount(profile.duration));
   if (targetGroups <= 1) return ranked.slice(0, targetGroups);
 
-  const prioritySlots = Math.max(1, targetGroups - 1);
-  const plan = ranked.slice(0, prioritySlots);
-  const rotationCandidates = ranked.slice(prioritySlots);
-  const rotatingMuscle = weightedMuscleChoice(rotationCandidates, profile, recovery, balance);
-  if (rotatingMuscle) plan.push(rotatingMuscle);
+  const plan = [];
+  const available = [...ranked];
+  while (plan.length < targetGroups && available.length) {
+    const topWindow = available.slice(0, Math.min(3, available.length));
+    const muscle = weightedDeficitChoice(topWindow, profile, recovery, balance);
+    const index = available.indexOf(muscle);
+    plan.push(muscle);
+    available.splice(index >= 0 ? index : 0, 1);
+  }
   return plan;
 }
 
@@ -869,7 +875,7 @@ function minimumWorkoutMoves(duration) {
 
 function backfillSparseWorkout(chosen, estimatedMinutes, minimumMoves, maxMoves, timeBudget, pool, recentNames, recovery, profile, balance = muscleBalanceStatus(profile)) {
   if (chosen.length >= minimumMoves) return estimatedMinutes;
-  const fillOrder = rankAvailableMuscles(profile, pool, recovery, balance);
+  const fillOrder = rankDeficitMuscles(profile, pool, recovery, balance);
   let madeProgress = true;
 
   while (chosen.length < minimumMoves && chosen.length < maxMoves && madeProgress) {
@@ -902,6 +908,14 @@ function rankAvailableMuscles(profile, pool, recovery, balance = muscleBalanceSt
       const scoreA = muscleGenerationWeight(profile, a, balance, recovery) * 10 - (recovery[a] || 0) * 16;
       const scoreB = muscleGenerationWeight(profile, b, balance, recovery) * 10 - (recovery[b] || 0) * 16;
       return scoreB - scoreA;
+    });
+}
+
+function rankDeficitMuscles(profile, pool, recovery, balance = muscleBalanceStatus(profile)) {
+  return muscles
+    .filter((muscle) => pool.some((exercise) => exercise.muscle === muscle))
+    .sort((a, b) => {
+      return muscleDeficitScore(profile, b, balance, recovery) - muscleDeficitScore(profile, a, balance, recovery);
     });
 }
 
@@ -994,6 +1008,8 @@ function muscleBalanceStatus(profile = state.profile) {
     balance[muscle] = {
       target,
       actual: actualShare,
+      deficit: gap,
+      deficitRatio: target ? gap / target : 0,
       multiplier: Math.max(0.65, 1 + correction + absenceBoost)
     };
   });
@@ -1027,6 +1043,18 @@ function muscleGenerationWeight(profile, muscle, balance = muscleBalanceStatus(p
   return targetWeight * balanceMultiplier * recoveryMultiplier;
 }
 
+function muscleDeficitScore(profile, muscle, balance = muscleBalanceStatus(profile), recovery = {}) {
+  const priorityOrder = getPriorityOrder(profile);
+  const rank = priorityOrder.indexOf(muscle);
+  const priorityWeight = priorityTargetWeight(rank < 0 ? muscles.length - 1 : rank);
+  const deficitRatio = balance[muscle]?.deficitRatio ?? 0;
+  const target = balance[muscle]?.target ?? 0;
+  const recoveryBurden = recovery[muscle] || 0;
+  const deficitScore = clamp(deficitRatio, -1, 1.4) * 12;
+  const priorityTieBreaker = priorityWeight * 0.55 + target * 8;
+  return deficitScore + priorityTieBreaker - recoveryBurden * 9;
+}
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -1034,6 +1062,12 @@ function clamp(value, min, max) {
 function muscleAllocationNeed(muscle, chosen, allocation) {
   const target = allocation[muscle]?.target || 0;
   return target - muscleMinutes(chosen, muscle);
+}
+
+function remainingMuscleNeed(muscle, chosen, allocation, balance = muscleBalanceStatus(state.profile)) {
+  const allocationNeed = muscleAllocationNeed(muscle, chosen, allocation);
+  const longTermNeed = Math.max(0, balance[muscle]?.deficitRatio || 0) * 6;
+  return allocationNeed + longTermNeed;
 }
 
 function muscleMinutes(exercises, muscle) {
@@ -1055,6 +1089,21 @@ function weightedMuscleChoice(candidates, profile, recovery, balance = muscleBal
     if (roll <= 0) return item.muscle;
   }
   return weighted.at(-1).muscle;
+}
+
+function weightedDeficitChoice(candidates, profile, recovery, balance = muscleBalanceStatus(profile)) {
+  if (!candidates.length) return null;
+  const scored = candidates.map((muscle) => ({
+    muscle,
+    weight: Math.max(1, muscleDeficitScore(profile, muscle, balance, recovery) + 14)
+  }));
+  const total = scored.reduce((sum, item) => sum + item.weight, 0);
+  let roll = Math.random() * total;
+  for (const item of scored) {
+    roll -= item.weight;
+    if (roll <= 0) return item.muscle;
+  }
+  return scored.at(-1).muscle;
 }
 
 function chooseExerciseForMuscle(muscle, pool, chosen, recentNames, recovery, minutesAvailable, muscleAllocation = null) {
