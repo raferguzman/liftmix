@@ -2,6 +2,8 @@ const muscles = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core"];
 const equipmentOptions = ["Dumbbells", "Barbell", "Cables", "Machines", "Bodyweight", "Kettlebells"];
 const RECOVERY_WINDOW_MS = 48 * 60 * 60 * 1000;
 const BALANCE_HISTORY_LIMIT = 10;
+const EXERCISE_FRESHNESS_HISTORY_LIMIT = 5;
+const RECENT_EXERCISE_CHANCE = 0.35;
 const SECONDARY_BALANCE_CREDIT = 0.35;
 const defaultProfile = {
   priorities: { Arms: 6, Back: 5, Chest: 4, Core: 3, Legs: 2, Shoulders: 1 },
@@ -743,7 +745,7 @@ function generateWorkout() {
     return exerciseRecoveryBurden(a, recovery) - exerciseRecoveryBurden(b, recovery);
   });
 
-  const recentNames = new Set(state.history.slice(0, 3).flatMap((item) => item.exerciseIds));
+  const recentNames = recentExerciseIds(EXERCISE_FRESHNESS_HISTORY_LIMIT);
   const muscleBalance = muscleBalanceStatus(profile);
   const muscleAllocation = buildMuscleAllocation(profile, generationPool, recovery, timeBudget, muscleBalance);
   const musclePlan = buildMusclePlan(profile, generationPool, recovery, maxMoves, muscleBalance);
@@ -1125,9 +1127,23 @@ function chooseExerciseForMuscle(muscle, pool, chosen, recentNames, recovery, mi
     ? preferredPool.filter((exercise) => exercise.style === "compound")
     : [];
   const durationPool = longWorkoutCompounds.length ? longWorkoutCompounds : preferredPool;
-  const fresh = shuffleArray(durationPool.filter((exercise) => !recentNames.has(exercise.id)));
-  const recent = shuffleArray(durationPool.filter((exercise) => recentNames.has(exercise.id)));
-  return fresh[0] || recent[0] || null;
+  return weightedExerciseChoice(durationPool, recentNames);
+}
+
+function weightedExerciseChoice(candidates, recentNames) {
+  if (!candidates.length) return null;
+  const allRecent = candidates.every((exercise) => recentNames.has(exercise.id));
+  const weighted = candidates.map((exercise) => ({
+    exercise,
+    weight: allRecent || !recentNames.has(exercise.id) ? 1 : RECENT_EXERCISE_CHANCE
+  }));
+  const total = weighted.reduce((sum, item) => sum + item.weight, 0);
+  let roll = Math.random() * total;
+  for (const item of weighted) {
+    roll -= item.weight;
+    if (roll <= 0) return item.exercise;
+  }
+  return weighted.at(-1).exercise;
 }
 
 function shuffleArray(items) {
