@@ -1494,9 +1494,11 @@ function formatLastPerformance(exercise) {
   if (!last) return "Last time: no prior log";
   const sets = last.sets
     .filter((set) => hasLoggedValues(set, exercise))
-    .map((set) => formatLoggedSet(set, exercise.logging))
-    .join(" · ");
-  return `<strong>Last:</strong> ${sets || "no completed sets"}`;
+    .map((set, index) => `<li><span>Set ${index + 1}</span><b>${formatLoggedSet(set, exercise.logging)}</b></li>`)
+    .join("");
+  return sets
+    ? `<strong>Last:</strong><ul>${sets}</ul>`
+    : `<strong>Last:</strong> no completed sets`;
 }
 
 function formatLoggedSet(set, logging = "weight") {
@@ -2044,10 +2046,7 @@ document.addEventListener("input", (event) => {
     const set = exercise?.log?.[Number(event.target.dataset.set)];
     if (!set) return;
     set[event.target.dataset.field] = event.target.value;
-    set.done = hasCompleteLog(set, exercise);
-    exercise.completed = exercise.log.every((entry) => entry.done);
     persistState();
-    updateCompletionButtons(exercise);
   }
   if (event.target.matches("[data-exercise-note]")) {
     const exerciseId = event.target.dataset.exerciseNote;

@@ -11,7 +11,7 @@ const builtInExerciseLibrary = [
   { id: "machine-chest-press", name: "Machine Chest Press", muscle: "Chest", equipment: "Machines", pattern: "press", style: "compound", logging: "weight", note: "Set the seat so the handles begin near mid-chest." },
   { id: "pec-deck", name: "Pec Deck (Chest Fly Machine)", muscle: "Chest", equipment: "Machines", pattern: "fly", style: "accessory", logging: "weight", note: "Keep your back against the pad and squeeze smoothly." },
   { id: "smith-machine-bench-press", name: "Smith Machine Bench Press", muscle: "Chest", equipment: "Machines", pattern: "press", style: "compound", logging: "weight", note: "Position the bench so the bar tracks over mid-chest." },
-  { id: "standard-push-up", name: "Standard Push-Up", muscle: "Chest", equipment: "Bodyweight", pattern: "press", style: "compound", logging: "reps", note: "Keep your body straight and lower your chest between your hands." },
+  { id: "standard-push-up", name: "Standard Push-Up", muscle: "Chest", equipment: "Bodyweight", pattern: "press", style: "compound", logging: "reps", note: "Keep your body straight and lower your chest between your hands with elbows out at 45 degrees." },
   { id: "wide-push-up", name: "Wide Push-Up", muscle: "Chest", equipment: "Bodyweight", pattern: "press", style: "accessory", logging: "reps", note: "Place hands wider than shoulders without flaring excessively." },
 
   // Back
@@ -83,6 +83,7 @@ const builtInExerciseLibrary = [
   { id: "close-grip-bench-press", name: "Close-Grip Bench Press", muscle: "Arms", equipment: "Barbell", pattern: "press", style: "compound", logging: "weight", note: "Use a shoulder-width grip and keep elbows controlled." },
   { id: "close-grip-push-up", name: "Close-Grip Push-Up", muscle: "Arms", equipment: "Bodyweight", pattern: "extension", style: "accessory", logging: "reps", note: "Keep hands near shoulder width and elbows close." },
   { id: "concentration-curl", name: "Concentration Curl", muscle: "Arms", equipment: "Dumbbells", pattern: "curl", style: "accessory", logging: "weight", note: "Brace your elbow against your thigh and curl slowly." },
+  { id: "dead-hang", name: "Dead Hang", muscle: "Arms", equipment: "Bodyweight", pattern: "grip", style: "accessory", logging: "duration", note: "Hang with straight arms, shoulders controlled, and body still." },
   { id: "diamond-push-up", name: "Diamond Push-Up", muscle: "Arms", equipment: "Bodyweight", pattern: "extension", style: "accessory", logging: "reps", note: "Keep your elbows back at about a 45-degree angle." },
   { id: "dumbbell-curl", name: "Dumbbell Curl", muscle: "Arms", equipment: "Dumbbells", pattern: "curl", style: "accessory", logging: "weight", note: "Keep your elbows beside your torso and avoid swinging." },
   { id: "dumbbell-overhead-triceps-extension", name: "Dumbbell Overhead Triceps Extension", muscle: "Arms", equipment: "Dumbbells", pattern: "extension", style: "accessory", logging: "weight", note: "Keep elbows pointed up and lower behind your head." },
@@ -90,16 +91,19 @@ const builtInExerciseLibrary = [
   { id: "hammer-curl", name: "Hammer Curl", muscle: "Arms", equipment: "Dumbbells", pattern: "curl", style: "accessory", logging: "weight", note: "Keep palms facing inward and elbows still." },
   { id: "incline-dumbbell-curl", name: "Incline Dumbbell Curl", muscle: "Arms", equipment: "Dumbbells", pattern: "curl", style: "accessory", logging: "weight", note: "Let your arms hang and avoid lifting your shoulders." },
   { id: "machine-curl", name: "Machine Curl", muscle: "Arms", equipment: "Machines", pattern: "curl", style: "accessory", logging: "weight", note: "Align your elbows with the machine pivot." },
+  { id: "plate-pinch", name: "Plate Pinch", muscle: "Arms", equipment: "Barbell", pattern: "grip", style: "accessory", logging: "duration", note: "Pinch plates smooth-side out and stand tall while holding." },
   { id: "preacher-curl", name: "Preacher Curl", muscle: "Arms", equipment: "Barbell", pattern: "curl", style: "accessory", logging: "weight", note: "Keep your upper arms on the pad and avoid locking out hard." },
+  { id: "reverse-curl", name: "Reverse Curl", muscle: "Arms", equipment: "Barbell", pattern: "curl", style: "accessory", logging: "weight", note: "Use an overhand grip and keep your wrists straight." },
   { id: "rope-triceps-pressdown", name: "Rope Triceps Pressdown", muscle: "Arms", equipment: "Cables", pattern: "extension", style: "accessory", logging: "weight", note: "Separate the rope at the bottom without moving your elbows." },
   { id: "skull-crusher", name: "Skull Crusher", muscle: "Arms", equipment: "Barbell", pattern: "extension", style: "accessory", logging: "weight", note: "Keep upper arms steady and lower the bar under control." },
+  { id: "wrist-curl", name: "Wrist Curl", muscle: "Arms", equipment: "Dumbbells", pattern: "grip", style: "accessory", logging: "weight", note: "Support your forearms and curl only through your wrists." },
 
   // Core
   { id: "ab-wheel-rollout", name: "Ab-Wheel Rollout", muscle: "Core", equipment: "Bodyweight", pattern: "anti-extension", style: "accessory", logging: "reps", note: "Brace hard and roll only as far as you can control." },
   { id: "bear-plank", name: "Bear Plank", muscle: "Core", equipment: "Bodyweight", pattern: "anti-extension", style: "accessory", logging: "duration", note: "Hover your knees just off the floor and keep your back flat." },
   { id: "bicycle-crunch", name: "Bicycle Crunch", muscle: "Core", equipment: "Bodyweight", pattern: "rotation", style: "accessory", logging: "reps", note: "Rotate through your ribs rather than pulling your neck." },
   { id: "bird-dog", name: "Bird Dog", muscle: "Core", equipment: "Bodyweight", pattern: "anti-rotation", style: "accessory", logging: "reps", note: "Reach opposite arm and leg while keeping hips level." },
-  { id: "cable-chop", name: "Cable Chop", muscle: "Core", equipment: "Cables", pattern: "rotation", style: "accessory", logging: "weight", note: "Move diagonally with control and keep your hips stable." },
+  { id: "cable-chop", name: "Cable Chop", muscle: "Core", equipment: "Cables", pattern: "rotation", style: "accessory", logging: "weight", note: "Pull down diagonally with control. Keep your hips stable." },
   { id: "cable-crunch", name: "Cable Crunch", muscle: "Core", equipment: "Cables", pattern: "flexion", style: "accessory", logging: "weight", note: "Curl your ribs toward your hips without pulling with your arms." },
   { id: "hanging-knee-raise", name: "Hanging Knee Raise", muscle: "Core", equipment: "Bodyweight", pattern: "flexion", style: "accessory", logging: "reps", note: "Lift your knees without swinging." },
   { id: "hanging-leg-raise", name: "Hanging Leg Raise", muscle: "Core", equipment: "Bodyweight", pattern: "flexion", style: "accessory", logging: "reps", note: "Keep your legs controlled and avoid using momentum." },
