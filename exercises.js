@@ -10,6 +10,7 @@ const builtInExerciseLibrary = [
   { id: "low-to-high-cable-fly", name: "Low-to-High Cable Fly", muscle: "Chest", equipment: "Cables", pattern: "fly", style: "accessory", logging: "weight", note: "Sweep the handles upward toward your upper chest." },
   { id: "machine-chest-press", name: "Machine Chest Press", muscle: "Chest", equipment: "Machines", pattern: "press", style: "compound", logging: "weight", note: "Set the seat so the handles begin near mid-chest." },
   { id: "pec-deck", name: "Pec Deck (Chest Fly Machine)", muscle: "Chest", equipment: "Machines", pattern: "fly", style: "accessory", logging: "weight", note: "Keep your back against the pad and squeeze smoothly." },
+  { id: "single-arm-cable-fly", name: "Single-Arm Cable Fly", muscle: "Chest", equipment: "Cables", pattern: "fly", style: "accessory", logging: "weight", note: "Use a staggered stance and bring your hand across your chest." },
   { id: "smith-machine-bench-press", name: "Smith Machine Bench Press", muscle: "Chest", equipment: "Machines", pattern: "press", style: "compound", logging: "weight", note: "Position the bench so the bar tracks over mid-chest." },
   { id: "standard-push-up", name: "Standard Push-Up", muscle: "Chest", equipment: "Bodyweight", pattern: "press", style: "compound", logging: "reps", note: "Keep your body straight and lower your chest between your hands with elbows out at 45 degrees." },
   { id: "wide-push-up", name: "Wide Push-Up", muscle: "Chest", equipment: "Bodyweight", pattern: "press", style: "accessory", logging: "reps", note: "Place hands wider than shoulders without flaring excessively." },
@@ -71,6 +72,7 @@ const builtInExerciseLibrary = [
   { id: "pike-push-up", name: "Pike Push-Up", muscle: "Shoulders", equipment: "Bodyweight", pattern: "press", style: "compound", logging: "reps", note: "Point hips high and elbows back. Lower your head between your hands." },
   { id: "rear-delt-machine", name: "Rear Delt Machine", muscle: "Shoulders", equipment: "Machines", pattern: "rear delt", style: "accessory", logging: "weight", note: "Keep your chest against the pad and pull wide." },
   { id: "reverse-dumbbell-fly", name: "Reverse Dumbbell Fly", muscle: "Shoulders", equipment: "Dumbbells", pattern: "rear delt", style: "accessory", logging: "weight", note: "Hinge forward and move from the shoulders, not momentum." },
+  { id: "single-arm-cable-rear-delt-fly", name: "Single-Arm Cable Rear Delt Fly", muscle: "Shoulders", equipment: "Cables", pattern: "rear delt", style: "accessory", logging: "weight", note: "Hinge slightly forward and pull across without twisting." },
   { id: "single-arm-cable-shoulder-press", name: "Single-Arm Cable Shoulder Press", muscle: "Shoulders", equipment: "Cables", pattern: "press", style: "compound", logging: "weight", note: "Brace your torso and press without rotating." },
 
   // Arms
@@ -95,6 +97,9 @@ const builtInExerciseLibrary = [
   { id: "preacher-curl", name: "Preacher Curl", muscle: "Arms", equipment: "Barbell", pattern: "curl", style: "accessory", logging: "weight", note: "Keep your upper arms on the pad and avoid locking out hard." },
   { id: "reverse-curl", name: "Reverse Curl", muscle: "Arms", equipment: "Barbell", pattern: "curl", style: "accessory", logging: "weight", note: "Use an overhand grip and keep your wrists straight." },
   { id: "rope-triceps-pressdown", name: "Rope Triceps Pressdown", muscle: "Arms", equipment: "Cables", pattern: "extension", style: "accessory", logging: "weight", note: "Separate the rope at the bottom without moving your elbows." },
+  { id: "single-arm-cable-curl", name: "Single-Arm Cable Curl", muscle: "Arms", equipment: "Cables", pattern: "curl", style: "accessory", logging: "weight", note: "Stand slightly forward and curl with steady cable tension." },
+  { id: "single-arm-cable-triceps-pressdown", name: "Single-Arm Cable Triceps Pressdown", muscle: "Arms", equipment: "Cables", pattern: "extension", style: "accessory", logging: "weight", note: "Hold the cable end with a neutral grip. Pin your elbow and press down." },
+  { id: "single-arm-overhead-cable-triceps-extension", name: "Single-Arm Overhead Cable Triceps Extension", muscle: "Arms", equipment: "Cables", pattern: "extension", style: "accessory", logging: "weight", note: "Face away and hold the cable end. Extend without arching." },
   { id: "skull-crusher", name: "Skull Crusher", muscle: "Arms", equipment: "Barbell", pattern: "extension", style: "accessory", logging: "weight", note: "Keep upper arms steady and lower the bar under control." },
   { id: "wrist-curl", name: "Wrist Curl", muscle: "Arms", equipment: "Dumbbells", pattern: "grip", style: "accessory", logging: "weight", note: "Support your forearms and curl only through your wrists." },
 
