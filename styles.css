@@ -550,17 +550,35 @@ p {
 }
 
 .last-performance {
-  margin: 8px 0;
-  padding: 8px 10px;
+  margin: 6px 0;
+  padding: 7px 9px;
   border-radius: 8px;
   background: #f0e8dd;
   color: #5c554d;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.28;
 }
 
 .last-performance strong {
+  display: block;
   color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 650;
+  margin-bottom: 3px;
+}
+
+.last-performance ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.last-performance li {
+  color: #4f493f;
+  font-weight: 500;
 }
 
 .set-log {

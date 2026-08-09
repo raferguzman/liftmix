@@ -1510,11 +1510,11 @@ function formatLastPerformance(exercise) {
   if (!last) return "Last time: no prior log";
   const sets = last.sets
     .filter((set) => hasLoggedValues(set, exercise))
-    .map((set, index) => `<li><span>Set ${index + 1}</span><b>${formatLoggedSet(set, exercise.logging)}</b></li>`)
+    .map((set, index) => `<li>${index + 1}: ${formatLoggedSet(set, exercise.logging)}</li>`)
     .join("");
   return sets
-    ? `<strong>Last:</strong><ul>${sets}</ul>`
-    : `<strong>Last:</strong> no completed sets`;
+    ? `<strong>Last</strong><ul>${sets}</ul>`
+    : `<strong>Last</strong><span> no completed sets</span>`;
 }
 
 function formatLoggedSet(set, logging = "weight") {
