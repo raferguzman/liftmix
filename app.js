@@ -382,8 +382,9 @@ function renderSetRows(exercise) {
 
 function logFieldsForExercise(exercise) {
   const logging = exercise.logging || "weight";
+  const repsPlaceholder = exercise.reps && exercise.logging !== "duration" ? exercise.reps : "reps";
   if (logging === "reps") {
-    return [{ key: "reps", label: "Reps", placeholder: "reps", inputmode: "numeric" }];
+    return [{ key: "reps", label: "Reps", placeholder: repsPlaceholder, inputmode: "numeric" }];
   }
   if (logging === "duration") {
     return [{ key: "duration", label: "Time", placeholder: "sec", inputmode: "numeric" }];
@@ -391,12 +392,12 @@ function logFieldsForExercise(exercise) {
   if (logging === "assistance") {
     return [
       { key: "assistance", label: "Assistance", placeholder: "lb", inputmode: "decimal" },
-      { key: "reps", label: "Reps", placeholder: "reps", inputmode: "numeric" }
+      { key: "reps", label: "Reps", placeholder: repsPlaceholder, inputmode: "numeric" }
     ];
   }
   return [
     { key: "weight", label: "Weight", placeholder: "lb", inputmode: "decimal" },
-    { key: "reps", label: "Reps", placeholder: "reps", inputmode: "numeric" }
+    { key: "reps", label: "Reps", placeholder: repsPlaceholder, inputmode: "numeric" }
   ];
 }
 

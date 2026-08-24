@@ -21,6 +21,7 @@ const builtInExerciseLibrary = [
   { id: "chin-up", name: "Chin-Up", muscle: "Back", equipment: "Bodyweight", pattern: "vertical pull", style: "compound", logging: "reps", note: "Use an underhand grip and pull your chest toward the bar." },
   { id: "close-grip-lat-pulldown", name: "Close-Grip Lat Pulldown", muscle: "Back", equipment: "Machines", pattern: "vertical pull", style: "compound", logging: "weight", note: "Keep your chest tall and draw your elbows down." },
   { id: "conventional-deadlift", name: "Conventional Deadlift", muscle: "Back", equipment: "Barbell", pattern: "hinge", style: "compound", logging: "weight", note: "Brace before lifting and keep the bar close to your legs." },
+  { id: "good-morning", name: "Good Morning", muscle: "Back", equipment: "Barbell", pattern: "hinge", style: "compound", logging: "weight", note: "Hinge at the hips and push them back. Stand tall without rounding. Do not overload." },
   { id: "inverted-row", name: "Inverted Row", muscle: "Back", equipment: "Bodyweight", pattern: "row", style: "compound", logging: "reps", note: "Dig in your heels and keep your body rigid at about 30 degrees. Pull your chest to the bar, elbows close." },
   { id: "kettlebell-row", name: "Kettlebell Row", muscle: "Back", equipment: "Kettlebells", pattern: "row", style: "compound", logging: "weight", note: "Keep your hips square and pull toward your back pocket." },
   { id: "lat-pulldown", name: "Lat Pulldown", muscle: "Back", equipment: "Machines", pattern: "vertical pull", style: "compound", logging: "weight", note: "Pull to your upper chest without leaning far backward." },
@@ -29,6 +30,7 @@ const builtInExerciseLibrary = [
   { id: "machine-row", name: "Machine Row", muscle: "Back", equipment: "Machines", pattern: "row", style: "compound", logging: "weight", note: "Keep your chest supported and finish with elbows behind you." },
   { id: "one-arm-dumbbell-row", name: "One-Arm Dumbbell Row", muscle: "Back", equipment: "Dumbbells", pattern: "row", style: "compound", logging: "weight", note: "Keep your back flat and pause at the top." },
   { id: "pull-up", name: "Pull-Up", muscle: "Back", equipment: "Bodyweight", pattern: "vertical pull", style: "compound", logging: "reps", note: "Start from a controlled hang and pull without swinging." },
+  { id: "renegade-row", name: "Renegade Row", muscle: "Back", equipment: "Dumbbells", pattern: "row", style: "compound", logging: "weight", note: "Hold a strong plank with a dumbbell in each hand. Row one at a time without twisting your hips." },
   { id: "seated-cable-row", name: "Seated Cable Row", muscle: "Back", equipment: "Cables", pattern: "row", style: "compound", logging: "weight", note: "Stay tall and pull the handle toward your waist." },
   { id: "single-arm-cable-row", name: "Single-Arm Cable Row", muscle: "Back", equipment: "Cables", pattern: "row", style: "compound", logging: "weight", note: "Resist torso rotation as you pull." },
 
@@ -65,7 +67,7 @@ const builtInExerciseLibrary = [
   { id: "cable-rear-delt-fly", name: "Cable Rear Delt Fly", muscle: "Shoulders", equipment: "Cables", pattern: "rear delt", style: "accessory", logging: "weight", note: "Pull your arms wide without shrugging." },
   { id: "dumbbell-front-raise", name: "Dumbbell Front Raise", muscle: "Shoulders", equipment: "Dumbbells", pattern: "front raise", style: "accessory", logging: "weight", note: "Lift under control and avoid leaning backward." },
   { id: "dumbbell-lateral-raise", name: "Dumbbell Lateral Raise", muscle: "Shoulders", equipment: "Dumbbells", pattern: "lateral raise", style: "accessory", logging: "weight", note: "Use soft elbows and raise without swinging." },
-  { id: "dumbbell-shoulder-press", name: "Dumbbell Shoulder Press", muscle: "Shoulders", equipment: "Dumbbells", pattern: "press", style: "compound", logging: "weight", note: "Keep your ribs down and press evenly overhead." },
+  { id: "dumbbell-shoulder-press", name: "Dumbbell Shoulder Press", muscle: "Shoulders", equipment: "Dumbbells", pattern: "press", style: "compound", logging: "weight", note: "Keep your ribs down and elbows at about 45 degrees. Press up evenly, then lower to a count of 3." },
   { id: "leaning-cable-lateral-raise", name: "Leaning Cable Lateral Raise", muscle: "Shoulders", equipment: "Cables", pattern: "lateral raise", style: "accessory", logging: "weight", note: "Lean away slightly and keep steady cable tension." },
   { id: "machine-lateral-raise", name: "Machine Lateral Raise", muscle: "Shoulders", equipment: "Machines", pattern: "lateral raise", style: "accessory", logging: "weight", note: "Set the pads above your elbows and avoid shrugging." },
   { id: "machine-shoulder-press", name: "Machine Shoulder Press", muscle: "Shoulders", equipment: "Machines", pattern: "press", style: "compound", logging: "weight", note: "Adjust the seat so the handles start near shoulder height." },
@@ -73,7 +75,7 @@ const builtInExerciseLibrary = [
   { id: "rear-delt-machine", name: "Rear Delt Machine", muscle: "Shoulders", equipment: "Machines", pattern: "rear delt", style: "accessory", logging: "weight", note: "Keep your chest against the pad and pull wide." },
   { id: "reverse-dumbbell-fly", name: "Reverse Dumbbell Fly", muscle: "Shoulders", equipment: "Dumbbells", pattern: "rear delt", style: "accessory", logging: "weight", note: "Hinge forward and move from the shoulders, not momentum." },
   { id: "single-arm-cable-rear-delt-fly", name: "Single-Arm Cable Rear Delt Fly", muscle: "Shoulders", equipment: "Cables", pattern: "rear delt", style: "accessory", logging: "weight", note: "Hinge slightly forward and pull across without twisting." },
-  { id: "single-arm-cable-shoulder-press", name: "Single-Arm Cable Shoulder Press", muscle: "Shoulders", equipment: "Cables", pattern: "press", style: "compound", logging: "weight", note: "Brace your torso and press without rotating." },
+  { id: "single-arm-cable-shoulder-press", name: "Single-Arm Cable Shoulder Press", muscle: "Shoulders", equipment: "Cables", pattern: "press", style: "compound", logging: "weight", note: "Standing with the cable behind you, brace your torso and press up without rotating." },
 
   // Arms
   { id: "alternating-dumbbell-curl", name: "Alternating Dumbbell Curl", muscle: "Arms", equipment: "Dumbbells", pattern: "curl", style: "accessory", logging: "weight", note: "Keep your elbows still and alternate controlled reps." },
